@@ -12,7 +12,6 @@ Mesos-consul automatically registers/deregisters services run as Mesos tasks
 Example
 
 	mesos-consul --registry=consul://127.0.0.1:8500 --zk=zk://127.0.0.1:2181/mesos --refresh=30s
-```
 
 ## Todo
   * Add support for tags
