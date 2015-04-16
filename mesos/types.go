@@ -3,6 +3,7 @@ package mesos
 type follower struct {
 	Id		string	`json:"id"`
 	Hostname	string	`json:"hostname"`
+	Pid		string	`json:"pid"`
 }
 
 type Followers []follower

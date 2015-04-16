@@ -32,10 +32,12 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 
 			s := new(registry.Service)
 
+			host, port := parsePID(f.Pid)
+
 			s.ID	= id
 			s.Name	= "mesos"
-			s.Port	= 5051
-			s.IP	= toIP(f.Hostname)
+			s.Port	= toPort(port)
+			s.IP	= toIP(host)
 			s.Tags	= []string{
 				"follower",
 				}

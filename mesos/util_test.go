@@ -11,3 +11,11 @@ func TestLeaderIP(t *testing.T) {
 
 	t.Log("ip: ", ip)
 }
+
+func TestParsePID(t *testing.T) {
+	l := "slave(1)@127.0.0.1:5051"
+
+	host, port := parsePid(l)
+
+	t.Log("host: ", host)
+}

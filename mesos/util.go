@@ -20,6 +20,15 @@ func cleanName(name string) string {
 	return strings.ToLower(strings.Replace(s, "_", "", -1))
 }
 
+// The PID has a specific format:
+// type@host:port
+func parsePID(pid string) (string, string) {
+	host := strings.Split(strings.Split(pid, ":")[0], "@")[1]
+	port := strings.Split(pid, ":")[1]
+
+	return host, port
+}
+	
 func leaderIP(leader string) string {
 	host := strings.Split(leader, "@")[1]
 	host = strings.Split(host, ":")[0]
