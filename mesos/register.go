@@ -10,13 +10,15 @@ import (
 //
 var servicesRegistered = make(map[string]bool)
 
-func (l *MesosLeader) register(r registry.RegistryAdapter, s *registry.Service) {
+func (m *Mesos) register(r registry.RegistryAdapter, s *registry.Service) {
 	servicesRegistered[s.ID] = true
+
+	log.Print("Registering ", s.ID)
 
 	r.Register(s)
 }
 
-func (l *MesosLeader) deregister(r registry.RegistryAdapter) {
+func (m *Mesos) deregister(r registry.RegistryAdapter) {
 	for s, b := range servicesRegistered {
 		if !b {
 			log.Print("Deregistering ", s)

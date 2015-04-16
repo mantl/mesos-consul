@@ -10,47 +10,47 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/CiscoCloud/mesos-consul/registry"
-
 )
 
-func (l *MesosLeader) Refresh(r registry.RegistryAdapter) error {
-	sj, err := l.findMaster()
+type Mesos struct {
+	Leader		MesosHost
+	Masters		[]MesosHost
+	Slaves		[]MesosHost
+	Lock		sync.Mutex
+}
+
+func New(zkURI string) *Mesos{
+	m := new(Mesos)
+
+	if zkURI == "" {
+		return nil
+	}
+
+	m.zkDetector(zkURI)
+
+	return m
+}
+
+func (m *Mesos) Refresh(r registry.RegistryAdapter) error {
+	sj, err := m.loadState()
 	if err != nil {
 		log.Print("No master")
 		return err
 	}
 	
 	if (sj.Leader == "") {
-		log.Print("Unexpected error")
 		return errors.New("Empty master")
 	}
 
-	l.parseState(sj, r)
+	m.parseState(sj, r)
 
 	return nil
 }
 
-func (l *MesosLeader) findMaster() (StateJSON, error) {
-	var sj StateJSON
-
-	if ip, port := l.getLeader(); ip != "" {
-		log.Print("Zookeeper says the leader is: ", ip)
-
-		sj, _ = l.loadWrap(ip, port)
-		if (sj.Leader == "") {
-			log.Print("Warning: Zookeeper is wrong about leader")
-			return sj, errors.New("no master")
-		} else {
-			return sj, nil
-		}
-	}
-
-	return sj, errors.New("no master")
-}
-
-func (l *MesosLeader) loadWrap(ip string, port string) (StateJSON, error) {
+func (m *Mesos) loadState() (StateJSON, error) {
 	var err error
 	var sj StateJSON
 
@@ -60,18 +60,25 @@ func (l *MesosLeader) loadWrap(ip string, port string) (StateJSON, error) {
 		}
 	}()
 
+	ip, port := m.getLeader()
+	if ip == "" {
+		return sj, errors.New("No master in zookeeper")
+	}
+
+	log.Printf("Zookeeper leader: %s:%s", ip, port)
+
 	log.Print("reloading from master ", ip)
-	sj = l.loadFromMaster(ip, port)
+	sj = m.loadFromMaster(ip, port)
 
 	if rip := leaderIP(sj.Leader); rip != ip {
 		log.Print("Warning: master changed to ", rip)
-		sj = l.loadFromMaster(rip, port)
+		sj = m.loadFromMaster(rip, port)
 	}
 
 	return sj, err
 }
 
-func (l *MesosLeader) loadFromMaster(ip string, port string) (sj StateJSON) {
+func (m *Mesos) loadFromMaster(ip string, port string) (sj StateJSON) {
 	url := "http://" + ip + ":" + port + "/master/state.json"
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -97,18 +104,11 @@ func (l *MesosLeader) loadFromMaster(ip string, port string) (sj StateJSON) {
 	return sj
 }
 
-func (l *MesosLeader) getLeader() (string, string) {
-	l.leaderLock.Lock()
-	defer l.leaderLock.Unlock()
-	return l.host, l.port
-}
-
-func (l *MesosLeader) parseState(sj StateJSON, r registry.RegistryAdapter) {
+func (m *Mesos) parseState(sj StateJSON, r registry.RegistryAdapter) {
 	log.Print("Running parseState")
 	for _, fw := range sj.Frameworks {
-		fname := cleanName(fw.Name)
 		for _, task := range fw.Tasks {
-			host, err := l.hostBySlaveId(sj.Slaves, task.SlaveId)
+			host, err := sj.Followers.hostById(task.FollowerId)
 			if err == nil && task.State == "TASK_RUNNING" {
 				tname := cleanName(task.Name)
 				if task.Resources.Ports != "" {
@@ -124,7 +124,7 @@ func (l *MesosLeader) parseState(sj StateJSON, r registry.RegistryAdapter) {
 							s.IP = ip[0].String()
 						}
 
-						l.register(r, s)
+						m.register(r, s)
 					}
 				}
 			}
@@ -132,17 +132,7 @@ func (l *MesosLeader) parseState(sj StateJSON, r registry.RegistryAdapter) {
 	}
 
 	// Remove completed tasks
-	l.deregister(r)
-}
-
-func (l *MesosLeader) hostBySlaveId(slist Slaves, slaveId string) (string, error) {
-	for _, s := range slist {
-		if s.Id == slaveId {
-			return s.Hostname, nil
-		}
-	}
-
-	return "", errors.New("not found")
+	m.deregister(r)
 }
 
 func yankPorts(ports string) []int {

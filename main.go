@@ -14,7 +14,7 @@ import (
 
 type Bridge struct {
 	registry	registry.RegistryAdapter		
-	leader		*mesos.MesosLeader
+	leader		*mesos.Mesos
 }
 
 func Usage() {
@@ -42,7 +42,7 @@ func main() {
 	bridge.registry = registry.GetRegistry(*registryURI)
 
 	log.Print("Using zookeeper: ", *zk)
-	bridge.leader = mesos.ZKdetect(*zk)
+	bridge.leader = mesos.New(*zk)
 
 	ticker := time.NewTicker(*refresh)
         bridge.leader.Refresh(bridge.registry)

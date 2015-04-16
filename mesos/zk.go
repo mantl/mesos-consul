@@ -13,32 +13,28 @@ import (
 	"github.com/mesos/mesos-go/mesosproto"
 )
 
-func ZKdetect(zk string) *MesosLeader {
-	if zk == "" {
-		return nil
+func (m *Mesos) zkDetector(zkURI string) {
+	if (zkURI == "") {
+		log.Fatal("Zookeeper address not provided")
 	}
 
-	l := new(MesosLeader)
-
-	dr, err := zkDetect(zk, l)
+	dr, err := m.leaderDetect(zkURI)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	log.Print("Waiting for initial information from Zookeeper")
+	log.Print("Waiting for initial leader information from Zookeeper")
 	select {
 	case <-dr:
-		log.Print("Done waiting for initial information from zookeeper")
+		log.Print("Done waiting for initial leader information from Zookeeper")
 	case <-time.After(2 * time.Minute):
 		log.Fatal("Timed out waiting for initial ZK detection")
 	}
-
-	return l
 }
 
-func zkDetect(zk string, l *MesosLeader) (<-chan struct{}, error) {
-	log.Print("Starting master detector for ZK ", zk)
-	md, err := detector.New(zk)
+func (m *Mesos) leaderDetect(zkURI string) (<-chan struct{}, error) {
+	log.Print("Starting leader detector for ZK ", zkURI)
+	md, err := detector.New(zkURI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create master detector: %v", err)
 	}
@@ -46,29 +42,35 @@ func zkDetect(zk string, l *MesosLeader) (<-chan struct{}, error) {
 	var startedOnce sync.Once
 	started := make(chan struct{})
 	if err := md.Detect(detector.OnMasterChanged(func(info *mesosproto.MasterInfo) {
-		l.leaderLock.Lock()
-		defer l.leaderLock.Unlock()
+		m.Lock.Lock()
+		defer m.Lock.Unlock()
 		if (info == nil) {
-			l.host = ""
+			m.Leader.host = ""
 		} else if host := info.GetHostname(); host != "" {
 			ip, err := net.LookupIP(host)
 			if err != nil {
-				l.host = host
+				m.Leader.host = host
 			} else {
-				l.host = ip[0].String()
+				m.Leader.host = ip[0].String()
 			}
 		} else {
 			octets := make([]byte, 4, 4)
 			binary.BigEndian.PutUint32(octets, info.GetIp())
 			ipv4 := net.IP(octets)
-			l.host = ipv4.String()
+			m.Leader.host = ipv4.String()
 		}
-		if len(l.host) > 0 {
-			l.port = fmt.Sprint(info.GetPort())
+		if len(m.Leader.host) > 0 {
+			m.Leader.port = fmt.Sprint(info.GetPort())
 		}
 		startedOnce.Do(func() { close(started) })
 	})); err != nil {
 		return nil, fmt.Errorf("failed to initalize master detector: %v", err)
 	}
 	return started, nil
+}
+
+func (m *Mesos) getLeader() (string, string) {
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+	return m.Leader.host, m.Leader.port
 }
