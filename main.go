@@ -42,11 +42,11 @@ func main() {
 	bridge.registry = registry.GetRegistry(*registryURI)
 
 	log.Print("Using zookeeper: ", *zk)
-	bridge.leader = mesos.New(*zk)
+	bridge.leader = mesos.New(*zk, bridge.registry)
 
 	ticker := time.NewTicker(*refresh)
-        bridge.leader.Refresh(bridge.registry)
+        bridge.leader.Refresh()
 	for _ = range ticker.C {
-	        bridge.leader.Refresh(bridge.registry)
+	        bridge.leader.Refresh()
 	}
 }

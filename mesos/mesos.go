@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,14 +15,16 @@ import (
 )
 
 type Mesos struct {
+	registry	registry.RegistryAdapter
 	Leader		MesosHost
 	Masters		[]MesosHost
-	Slaves		[]MesosHost
 	Lock		sync.Mutex
 }
 
-func New(zkURI string) *Mesos{
+func New(zkURI string, r registry.RegistryAdapter) *Mesos{
 	m := new(Mesos)
+
+	m.registry = r
 
 	if zkURI == "" {
 		return nil
@@ -34,7 +35,7 @@ func New(zkURI string) *Mesos{
 	return m
 }
 
-func (m *Mesos) Refresh(r registry.RegistryAdapter) error {
+func (m *Mesos) Refresh() error {
 	sj, err := m.loadState()
 	if err != nil {
 		log.Print("No master")
@@ -45,7 +46,7 @@ func (m *Mesos) Refresh(r registry.RegistryAdapter) error {
 		return errors.New("Empty master")
 	}
 
-	m.parseState(sj, r)
+	m.parseState(sj)
 
 	return nil
 }
@@ -104,8 +105,12 @@ func (m *Mesos) loadFromMaster(ip string, port string) (sj StateJSON) {
 	return sj
 }
 
-func (m *Mesos) parseState(sj StateJSON, r registry.RegistryAdapter) {
+func (m *Mesos) parseState(sj StateJSON) {
 	log.Print("Running parseState")
+
+	m.RegisterHosts(sj)
+	log.Print("Done running RegisterHosts")
+
 	for _, fw := range sj.Frameworks {
 		for _, task := range fw.Tasks {
 			host, err := sj.Followers.hostById(task.FollowerId)
@@ -117,14 +122,9 @@ func (m *Mesos) parseState(sj StateJSON, r registry.RegistryAdapter) {
 						s.ID = fmt.Sprintf("%s:%s:%d", host, tname, port)
 						s.Name = tname
 						s.Port = port
-						ip, err := net.LookupIP(host)
-						if err != nil {
-							s.IP = host
-						} else {
-							s.IP = ip[0].String()
-						}
+						s.IP = toIP(host)
 
-						m.register(r, s)
+						m.register(s)
 					}
 				}
 			}
@@ -132,7 +132,7 @@ func (m *Mesos) parseState(sj StateJSON, r registry.RegistryAdapter) {
 	}
 
 	// Remove completed tasks
-	m.deregister(r)
+	m.deregister()
 }
 
 func yankPorts(ports string) []int {
