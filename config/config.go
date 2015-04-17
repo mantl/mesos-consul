@@ -29,7 +29,7 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		Refresh:	time.Minute,
-		Registry:	"",
+		Registry:	"consul://127.0.0.1:8500",
 		RegistryAuth:	&Auth{
 			Enabled: false,
 		},
@@ -38,6 +38,6 @@ func DefaultConfig() *Config {
 			Verify: true,
 		},
 		RegistryToken:	"",
-		Zk:		"",
+		Zk:		"zk://127.0.0.1:2181/mesos",
 	}
 }

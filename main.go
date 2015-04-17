@@ -47,6 +47,7 @@ func main() {
 }
 
 func parseFlags(args []string) (*config.Config, error) {
+	var doHelp bool
 	var c = config.DefaultConfig()
 
 	flags := flag.NewFlagSet("mesos-consul", flag.ContinueOnError)
@@ -54,6 +55,7 @@ func parseFlags(args []string) (*config.Config, error) {
 		fmt.Print(usage)
 	}
 
+	flags.BoolVar(&doHelp,			"help", false, "")
 	flags.DurationVar(&c.Refresh,		"refresh", time.Minute, "")
 	flags.StringVar(&c.Registry,		"registry", "", "")
 	flags.Var((*config.AuthVar)(c.RegistryAuth),	"registry-auth", "")
@@ -73,12 +75,9 @@ func parseFlags(args []string) (*config.Config, error) {
 		return nil, fmt.Errorf("extra argument(s): %q", args)
 	}
 
-	if c.Registry == "" {
-		return nil, fmt.Errorf("registry address not provided")
-	}
-
-	if c.Zk == "" {
-		return nil, fmt.Errorf("Zookeeper address not provided")
+	if (doHelp) {
+		flags.Usage()
+		os.Exit(0)
 	}
 
 	return c, nil
@@ -89,17 +88,18 @@ Usage: mesos-consul [options]
 
 Options:
 
-  --refresh=<time>			Set the Mesos refresh rate (default 1m)
-  --registry=<address>			Set the registry address
-  --registry-auth=<user[:pass]>		Set the basic authentication username
-					(and password)
-  --registry-ssl			Use SSL when connecting to the registry
-  --registry-ssl-verify			Verify certificates when connecting
-					via SSL
-  --registry-ssl-cert			SSL certificates to send to registry
-  --registry-ssl-cacert			Validate server certificate against
-					this CA
-					certificate file list
-  --registry-token=<token>		Set registry ACL token
-  --zk=<address>			Zookeeper path to Mesos
+  --refresh=<time>		Set the Mesos refresh rate
+				(default 1m)
+  --registry=<address>		Set the registry address
+				(default consul://127.0.0.1:8500)
+  --registry-auth=<user[:pass]>	Set the basic authentication username
+				(and password)
+  --registry-ssl		Use SSL when connecting to the registry
+  --registry-ssl-verify		Verify certificates when connecting via SSL
+  --registry-ssl-cert		SSL certificates to send to registry
+  --registry-ssl-cacert		Validate server certificate against this CA
+				certificate file list
+  --registry-token=<token>	Set registry ACL token
+  --zk=<address>		Zookeeper path to Mesos
+				(default zk://127.0.0.1:2181/mesos)
 `
