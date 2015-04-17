@@ -4,6 +4,8 @@ package registry
 import (
 	"net/url"
 	"time"
+
+	"github.com/CiscoCloud/mesos-consul/config"
 )
 
 type Config struct {
@@ -21,7 +23,7 @@ type Service struct {
 }
 
 type AdapterFactory interface {
-	New(uri *url.URL) RegistryAdapter
+	New(c *config.Config, uri *url.URL) RegistryAdapter
 }
 
 type RegistryAdapter interface {

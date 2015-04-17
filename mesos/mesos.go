@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/CiscoCloud/mesos-consul/config"
 	"github.com/CiscoCloud/mesos-consul/registry"
 )
 
@@ -21,16 +22,16 @@ type Mesos struct {
 	Lock		sync.Mutex
 }
 
-func New(zkURI string, r registry.RegistryAdapter) *Mesos{
+func New(c *config.Config, r registry.RegistryAdapter) *Mesos{
 	m := new(Mesos)
 
 	m.registry = r
 
-	if zkURI == "" {
+	if c.Zk == "" {
 		return nil
 	}
 
-	m.zkDetector(zkURI)
+	m.zkDetector(c.Zk)
 
 	return m
 }
