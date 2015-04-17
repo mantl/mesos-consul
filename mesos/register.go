@@ -45,6 +45,9 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 			log.Print("Registering: ", id)
 
 			m.registry.Register(s)
+			if err != nil {
+				log.Print(err)
+			}
 		}
 	}
 
@@ -66,7 +69,10 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 		
 
 	log.Print("Registering: ", s.ID)
-	m.registry.Register(s)
+	err = m.registry.Register(s)
+	if err != nil {
+		log.Print(err)
+	}
 }
 
 func (m *Mesos) register(s *registry.Service) {
@@ -74,7 +80,10 @@ func (m *Mesos) register(s *registry.Service) {
 
 	log.Print("Registering ", s.ID)
 
-	m.registry.Register(s)
+	err := m.registry.Register(s)
+	if err != nil {
+		log.Print(err)
+	}
 }
 
 func (m *Mesos) deregister() {
