@@ -1,4 +1,4 @@
-package zoo
+package zkdetect
 
 import (
 	"errors"
@@ -9,8 +9,8 @@ import (
 	"time"
 
 	log "github.com/golang/glog"
-	"github.com/mesos/mesos-go/detector"
-	mesos "github.com/mesos/mesos-go/mesosproto"
+//	"github.com/mesos/mesos-go/detector"
+//	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,10 +41,10 @@ func TestParseZk_multiIP(t *testing.T) {
 	assert.Equal(t, "/mesos", path)
 }
 
-func TestMasterDetectorStart(t *testing.T) {
+func TestClusterDetectorStart(t *testing.T) {
 	c, err := makeClient()
 	assert.False(t, c.isConnected())
-	md, err := NewMasterDetector(zkurl)
+	md, err := NewClusterDetector(zkurl)
 	defer md.Cancel()
 	assert.NoError(t, err)
 	c.errorHandler = ErrorHandler(func(c *Client, e error) {
@@ -56,14 +56,14 @@ func TestMasterDetectorStart(t *testing.T) {
 	assert.True(t, c.isConnected())
 }
 
-func TestMasterDetectorChildrenChanged(t *testing.T) {
+func TestClusterDetectorChildrenChanged(t *testing.T) {
 	wCh := make(chan struct{}, 1)
 
 	c, err := makeClient()
 	assert.NoError(t, err)
 	assert.False(t, c.isConnected())
 
-	md, err := NewMasterDetector(zkurl)
+	md, err := NewClusterDetector(zkurl)
 	defer md.Cancel()
 	assert.NoError(t, err)
 	// override zk.Conn with our own.
@@ -76,16 +76,20 @@ func TestMasterDetectorChildrenChanged(t *testing.T) {
 	assert.True(t, c.isConnected())
 
 	called := 0
-	md.Detect(detector.OnMasterChanged(func(master *mesos.MasterInfo) {
+	md.Detect(OnClusterChanged(func(cluster *ClusterInfo) {
 		//expect 2 calls in sequence: the first setting a master
 		//and the second clearing it
 		switch called++; called {
 		case 1:
-			assert.NotNil(t, master)
-			assert.Equal(t, master.GetId(), "master@localhost:5050")
+			assert.NotNil(t, cluster.leader)
+			assert.Equal(t, cluster.leader.GetId(), "master@localhost:5050")
 			wCh <- struct{}{}
 		case 2:
-			assert.Nil(t, master)
+			assert.Equal(t, cluster.leader.GetId(), "master@localhost:5050")
+			//assert.Nil(t, cluster.leader)
+			wCh <- struct{}{}
+		case 3:
+			assert.Nil(t, cluster)
 			wCh <- struct{}{}
 		default:
 			t.Fatalf("unexpected notification call attempt %d", called)
@@ -107,7 +111,7 @@ func TestMasterDetectorChildrenChanged(t *testing.T) {
 }
 
 // single connector instance, session does not expire, but it's internal connection to zk is flappy
-func TestMasterDetectFlappingConnectionState(t *testing.T) {
+func TestClusterDetectFlappingConnectionState(t *testing.T) {
 	c, err := newClient(test_zk_hosts, test_zk_path)
 	assert.NoError(t, err)
 
@@ -130,7 +134,12 @@ func TestMasterDetectFlappingConnectionState(t *testing.T) {
 		sessionEvents := make(chan zk.Event, 10)
 		watchEvents := make(chan zk.Event, 10)
 
-		connector.On("Get", fmt.Sprintf("%s/info_005", test_zk_path)).Return(newTestMasterInfo(1), &zk.Stat{}, nil).Once()
+		connector.On("Get", fmt.Sprintf("%s/info_005", test_zk_path)).Return(newTestClusterInfo("info_005"),
+			&zk.Stat{}, nil).Once()
+		connector.On("Get", fmt.Sprintf("%s/info_010", test_zk_path)).Return(newTestClusterInfo("info_010"),
+			&zk.Stat{}, nil).Once()
+		connector.On("Get", fmt.Sprintf("%s/info_022", test_zk_path)).Return(newTestClusterInfo("info_022"),
+			&zk.Stat{}, nil).Once()
 		connector.On("ChildrenW", test_zk_path).Return([]string{test_zk_path}, &zk.Stat{}, (<-chan zk.Event)(watchEvents), nil).Once()
 		go func() {
 			defer wg.Done()
@@ -155,7 +164,7 @@ func TestMasterDetectFlappingConnectionState(t *testing.T) {
 	}))
 	c.reconnDelay = 0 // there should be no reconnect, but just in case don't drag the test out
 
-	md, err := NewMasterDetector(zkurl)
+	md, err := NewClusterDetector(zkurl)
 	defer md.Cancel()
 	assert.NoError(t, err)
 
@@ -166,13 +175,13 @@ func TestMasterDetectFlappingConnectionState(t *testing.T) {
 
 	startTime := time.Now()
 	detected := false
-	md.Detect(detector.OnMasterChanged(func(master *mesos.MasterInfo) {
+	md.Detect(OnClusterChanged(func(cluster *ClusterInfo) {
 		if detected {
-			t.Fatalf("already detected master, was not expecting another change: %v", master)
+			t.Fatalf("already detected master, was not expecting another change: %v", cluster)
 		} else {
 			detected = true
-			assert.NotNil(t, master, fmt.Sprintf("on-master-changed %v", detected))
-			t.Logf("Leader change detected at %v: '%+v'", time.Now().Sub(startTime), master)
+			assert.NotNil(t, cluster.leader, fmt.Sprintf("on-master-changed %v", detected))
+			t.Logf("Leader change detected at %v: '%+v'", time.Now().Sub(startTime), cluster.leader)
 			wg.Done()
 		}
 	}))
@@ -190,7 +199,7 @@ func TestMasterDetectFlappingConnectionState(t *testing.T) {
 	}
 }
 
-func TestMasterDetectFlappingConnector(t *testing.T) {
+func TestClusterDetectFlappingConnector(t *testing.T) {
 	c, err := newClient(test_zk_hosts, test_zk_path)
 	assert.NoError(t, err)
 
@@ -209,7 +218,10 @@ func TestMasterDetectFlappingConnector(t *testing.T) {
 			Type:  zk.EventSession,
 			State: zk.StateConnected,
 		}
-		connector.On("Get", fmt.Sprintf("%s/info_005", test_zk_path)).Return(newTestMasterInfo(attempt), &zk.Stat{}, nil).Once()
+		for _, id := range initialChildren {
+			connector.On("Get", fmt.Sprintf("%s/%s", test_zk_path, id)).Return(newTestClusterInfo(id),
+				&zk.Stat{}, nil).Once()
+		}
 		connector.On("ChildrenW", test_zk_path).Return([]string{test_zk_path}, &zk.Stat{}, (<-chan zk.Event)(watchEvents), nil).Once()
 		go func(attempt int) {
 			defer close(sessionEvents)
@@ -232,7 +244,7 @@ func TestMasterDetectFlappingConnector(t *testing.T) {
 	}))
 	c.reconnDelay = 100 * time.Millisecond
 
-	md, err := NewMasterDetector(zkurl)
+	md, err := NewClusterDetector(zkurl)
 	defer md.Cancel()
 	assert.NoError(t, err)
 
@@ -245,17 +257,17 @@ func TestMasterDetectFlappingConnector(t *testing.T) {
 	wg.Add(4) // 2 x (connected, disconnected)
 	detected := 0
 	startTime := time.Now()
-	md.Detect(detector.OnMasterChanged(func(master *mesos.MasterInfo) {
+	md.Detect(OnClusterChanged(func(cluster *ClusterInfo) {
 		if detected > 3 {
 			// ignore
 			return
 		}
 		if (detected & 1) == 0 {
-			assert.NotNil(t, master, fmt.Sprintf("on-master-changed-%d", detected))
+			assert.NotNil(t, cluster.leader, fmt.Sprintf("on-master-changed-%d", detected))
 		} else {
-			assert.Nil(t, master, fmt.Sprintf("on-master-changed-%d", detected))
+			assert.Nil(t, cluster, fmt.Sprintf("on-master-changed-%d", detected))
 		}
-		t.Logf("Leader change detected at %v: '%+v'", time.Now().Sub(startTime), master)
+		t.Logf("Leader change detected at %v: '%+v'", time.Now().Sub(startTime), cluster)
 		detected++
 		wg.Done()
 	}))
@@ -273,7 +285,7 @@ func TestMasterDetectFlappingConnector(t *testing.T) {
 	}
 }
 
-func TestMasterDetectMultiple(t *testing.T) {
+func TestClusterDetectMultiple(t *testing.T) {
 	ch0 := make(chan zk.Event, 5)
 	ch1 := make(chan zk.Event, 5)
 
@@ -290,6 +302,10 @@ func TestMasterDetectMultiple(t *testing.T) {
 	connector.On("Close").Return(nil)
 	connector.On("Children", test_zk_path).Return(initialChildren, &zk.Stat{}, nil).Once()
 	connector.On("ChildrenW", test_zk_path).Return([]string{test_zk_path}, &zk.Stat{}, (<-chan zk.Event)(ch1), nil)
+	for _, id := range initialChildren {
+		connector.On("Get", fmt.Sprintf("%s/%s", test_zk_path, id)).Return(newTestClusterInfo(id),
+			&zk.Stat{}, nil).Once()
+	}
 
 	first := true
 	c.setFactory(asFactory(func() (Connector, <-chan zk.Event, error) {
@@ -302,7 +318,7 @@ func TestMasterDetectMultiple(t *testing.T) {
 		return connector, ch0, nil
 	}))
 
-	md, err := NewMasterDetector(zkurl)
+	md, err := NewClusterDetector(zkurl)
 	defer md.Cancel()
 	assert.NoError(t, err)
 
@@ -323,19 +339,19 @@ func TestMasterDetectMultiple(t *testing.T) {
 	var wg sync.WaitGroup
 	startTime := time.Now()
 	detected := 0
-	md.Detect(detector.OnMasterChanged(func(master *mesos.MasterInfo) {
-		if detected == 2 {
-			assert.Nil(t, master, fmt.Sprintf("on-master-changed-%d", detected))
+	md.Detect(OnClusterChanged(func(cluster *ClusterInfo) {
+		if detected == 3 {
+			assert.Nil(t, cluster.leader, fmt.Sprintf("on-master-changed-%d", detected))
 		} else {
-			assert.NotNil(t, master, fmt.Sprintf("on-master-changed-%d", detected))
+			assert.NotNil(t, cluster.leader, fmt.Sprintf("on-master-changed-%d", detected))
 		}
-		t.Logf("Leader change detected at %v: '%+v'", time.Now().Sub(startTime), master)
+		t.Logf("Leader change detected at %v: '%+v'", time.Now().Sub(startTime), cluster.leader)
 		detected++
 		wg.Done()
 	}))
 
 	// 3 leadership changes + disconnect (leader change to '')
-	wg.Add(4)
+	wg.Add(5)
 
 	go func() {
 		for i := range sequences {
@@ -345,7 +361,9 @@ func TestMasterDetectMultiple(t *testing.T) {
 			t.Logf("testing master change sequence %d, path '%v'", i, test_zk_path)
 			connector.On("Children", test_zk_path).Return(sequences[i], &zk.Stat{}, nil).Once()
 			if len(sequences[i]) > 0 {
-				connector.On("Get", fmt.Sprintf("%s/%s", test_zk_path, sorted[0])).Return(newTestMasterInfo(i), &zk.Stat{}, nil).Once()
+				connector.On("Get", fmt.Sprintf("%s/%s", test_zk_path, sorted[0])).Return(newTestClusterInfo(sorted[0]), &zk.Stat{}, nil).Once()
+				connector.On("Get", fmt.Sprintf("%s/%s", test_zk_path, sorted[1])).Return(newTestClusterInfo(sorted[1]), &zk.Stat{}, nil).Once()
+				connector.On("Get", fmt.Sprintf("%s/%s", test_zk_path, sorted[2])).Return(newTestClusterInfo(sorted[2]), &zk.Stat{}, nil).Once()
 			}
 			ch1 <- zk.Event{
 				Type: zk.EventNodeChildrenChanged,
@@ -382,14 +400,14 @@ func TestMasterDetectMultiple(t *testing.T) {
 	}
 }
 
-func TestMasterDetect_selectTopNode_none(t *testing.T) {
+func TestClusterDetect_selectTopNode_none(t *testing.T) {
 	assert := assert.New(t)
 	nodeList := []string{}
 	node := selectTopNode(nodeList)
 	assert.Equal("", node)
 }
 
-func TestMasterDetect_selectTopNode_0000x(t *testing.T) {
+func TestClusterDetect_selectTopNode_0000x(t *testing.T) {
 	assert := assert.New(t)
 	nodeList := []string{
 		"info_0000000046",
@@ -402,7 +420,7 @@ func TestMasterDetect_selectTopNode_0000x(t *testing.T) {
 	assert.Equal("info_0000000008", node)
 }
 
-func TestMasterDetect_selectTopNode_mixedEntries(t *testing.T) {
+func TestClusterDetect_selectTopNode_mixedEntries(t *testing.T) {
 	assert := assert.New(t)
 	nodeList := []string{
 		"info_0000000046",

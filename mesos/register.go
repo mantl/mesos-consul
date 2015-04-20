@@ -52,6 +52,23 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 	}
 
 	// Register masters
+	mas := m.getMasters()
+	for _, ma := range mas {
+		s := new(registry.Service)
+		s.ID	= fmt.Sprintf("mesos:%s:%s", ma.host, ma.port)
+		s.Name	= "mesos"
+		s.Port	= toPort(ma.port)
+		s.IP	= toIP(ma.host)
+		s.Tags	= []string{
+			"master",
+			}
+
+		log.Print("Registering: ", s.ID)
+		err := m.registry.Register(s)
+		if err != nil {
+			log.Print(err)
+		}
+	}
 	// TODO
 
 	// Register leader

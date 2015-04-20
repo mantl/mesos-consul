@@ -1,4 +1,4 @@
-package zoo
+package zkdetect
 
 import (
 	"errors"
