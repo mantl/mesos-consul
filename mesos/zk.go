@@ -63,6 +63,7 @@ func (m *Mesos) leaderDetect(zkURI string) (<-chan struct{}, error) {
 			*m.Masters = append(*m.Masters, mh)
 		}
 
+		m.Leader = new(MesosHost)
 		// Handle leader
 		if (info.Leader == nil) {
 			m.Leader.host = ""
