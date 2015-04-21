@@ -94,10 +94,15 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 }
 
 func (m *Mesos) register(s *registry.Service) {
-	currentState.services[s.ID] = true
+	if currentState.services[s.ID] {
+		log.Printf("Service found. Not registering: %s", s.ID)
+		currentState.services[s.ID] = true
+		return
+	}
 
 	log.Print("Registering ", s.ID)
 
+	currentState.services[s.ID] = true
 	err := m.registry.Register(s)
 	if err != nil {
 		log.Print(err)
