@@ -49,30 +49,23 @@ func (m *Mesos) leaderDetect(zkURI string) (<-chan struct{}, error) {
 		m.Lock.Lock()
 		defer m.Lock.Unlock()
 
-		m.Masters = new([]*MesosHost)
+		m.Masters = new([]MesosHost)
 
 		// Handle list of masters
 		for _, ma := range *info.Masters {
-			mh := new(MesosHost)
-
-			mh.host = m.getMasterIp(ma)
-			if len(mh.host) > 0 {
-				mh.port = fmt.Sprint(ma.GetPort())
-			}
+			mh := m.hostFromMasterInfo(ma)
 
 			*m.Masters = append(*m.Masters, mh)
 		}
 
-		m.Leader = new(MesosHost)
 		// Handle leader
-		if (info.Leader == nil) {
-			m.Leader.host = ""
-		} else {
-			m.Leader.host = m.getMasterIp(info.Leader)
-			if len(m.Leader.host) > 0 {
-				m.Leader.port = fmt.Sprint(info.Leader.GetPort())
-			}
+		ma := m.hostFromMasterInfo(info.Leader)
+		if len(ma.host) > 0 {
+			ma.isLeader = true
 		}
+
+		*m.Masters = append(*m.Masters, ma)
+
 		startedOnce.Do(func() { close(started) })
 	})); err != nil {
 		return nil, fmt.Errorf("failed to initalize master detector: %v", err)
@@ -80,44 +73,66 @@ func (m *Mesos) leaderDetect(zkURI string) (<-chan struct{}, error) {
 	return started, nil
 }
 
+// Get the leader out of the list of masters
+//
 func (m *Mesos) getLeader() (string, string) {
 	m.Lock.Lock()
 	defer m.Lock.Unlock()
-	return m.Leader.host, m.Leader.port
+
+	for _, ms := range *m.Masters {
+		if ms.isLeader {
+			return ms.host, ms.port
+		}
+	}
+
+	return "", ""
 }
 
-func (m *Mesos) getMasters() []*MesosHost {
+func (m *Mesos) getMasters() []MesosHost {
 	m.Lock.Lock()
 	defer m.Lock.Unlock()
 
-	ms := make([]*MesosHost, len(*m.Masters))
-	for _,msp := range ms {
-		mh := new(MesosHost)
-		mh.host = msp.host
-		mh.port = msp.port
-		ms = append(ms, mh)
+	ms := make([]MesosHost, len(*m.Masters))
+	for i, msp := range ms {
+		mh := MesosHost{
+			host:		msp.host,
+			port:		msp.port,
+			isLeader:	msp.isLeader,
+		}
+			
+		ms[i] = mh
 	}
 	return ms
 }
 
-func (ms *Mesos) getMasterIp(m *mesosproto.MasterInfo) string {
-	if m == nil {
-		return ""
-	}
+func (m *Mesos) hostFromMasterInfo(mi *mesosproto.MasterInfo) MesosHost {
+	var ipstring = ""
+	var port = ""
 
-	if host := m.GetHostname(); host != "" {
-		ip, err := net.LookupIP(host)
-		if err != nil {
-			return host
+	if mi != nil {
+		if host := mi.GetHostname(); host != "" {
+			ip, err := net.LookupIP(host)
+			if err != nil {
+				ipstring = host
+			} else {
+				ipstring = ip[0].String()
+			}
 		} else {
-			return ip[0].String()
+			octets := make([]byte, 4, 4)
+			binary.BigEndian.PutUint32(octets, mi.GetIp())
+			ipv4 := net.IP(octets)
+			ipstring = ipv4.String()
 		}
-	} else {
-		octets := make([]byte, 4, 4)
-		binary.BigEndian.PutUint32(octets, m.GetIp())
-		ipv4 := net.IP(octets)
-		return ipv4.String()
 	}
 
-	return ""
+	if len(ipstring) > 0 {
+		port = fmt.Sprint(mi.GetPort())
+	}
+		
+
+	return MesosHost{
+		host:		ipstring,
+		port:		port,
+		isLeader:	false,
+	}
 }

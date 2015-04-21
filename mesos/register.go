@@ -10,12 +10,14 @@ import (
 type registryState struct {
 	services	map[string]bool
 	followers	map[string]bool
+	masters		map[string]MesosHost
 }
 
 
 var currentState = registryState{
 	services:	make(map[string]bool),
 	followers:	make(map[string]bool),
+	masters:	make(map[string]MesosHost),
 }
 
 func (m *Mesos) RegisterHosts(sj StateJSON) {
@@ -54,41 +56,40 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 	// Register masters
 	mas := m.getMasters()
 	for _, ma := range mas {
+		id := fmt.Sprintf("%s:%s", ma.host, ma.port)
+		if master, ok := currentState.masters[id]; ok {
+			// Master has been found. Only update if the leader status has changed
+			if ma.isLeader ==  master.isLeader {
+				master.isRegistered = true
+				log.Printf("Master state unchanged, not registering: '%s'", id)
+				continue
+			}
+		}
+
+		ma.isRegistered = true
+		currentState.masters[id] = ma
+
 		s := new(registry.Service)
 		s.ID	= fmt.Sprintf("mesos:%s:%s", ma.host, ma.port)
 		s.Name	= "mesos"
 		s.Port	= toPort(ma.port)
 		s.IP	= toIP(ma.host)
-		s.Tags	= []string{
-			"master",
-			}
+		if ma.isLeader {
+			s.Tags	= []string{
+				"master",
+				}
+		} else {
+			s.Tags	= []string{
+				"master",
+				"leader",
+				}
+		}
 
 		log.Print("Registering: ", s.ID)
 		err := m.registry.Register(s)
 		if err != nil {
 			log.Print(err)
 		}
-	}
-	// TODO
-
-	// Register leader
-	ip, port := m.getLeader()
-
-	s := new(registry.Service)
-	s.ID	= fmt.Sprintf("mesos:%s:%s", ip, port)
-	s.Name	= "mesos"
-	s.Port	= toPort(port)
-	s.IP	= toIP(ip)
-	s.Tags	= []string{
-		"leader",
-		"master",
-		}
-		
-
-	log.Print("Registering: ", s.ID)
-	err := m.registry.Register(s)
-	if err != nil {
-		log.Print(err)
 	}
 }
 
@@ -103,7 +104,10 @@ func (m *Mesos) register(s *registry.Service) {
 	}
 }
 
+// deregister items that have gone away
+//
 func (m *Mesos) deregister() {
+	// Services
 	for s, b := range currentState.services {
 		if !b {
 			log.Print("Deregistering ", s)
@@ -114,6 +118,32 @@ func (m *Mesos) deregister() {
 			delete(currentState.services, s)
 		} else {
 			currentState.services[s] = false
+		}
+	}
+
+	// Followers
+	for id, isRegistered := range currentState.followers {
+		if !isRegistered {
+			log.Print("Deregistering ", id)
+			m.registry.Deregister(&registry.Service{
+				ID:		id,
+				})
+			delete(currentState.followers, id)
+		} else {
+			currentState.followers[id] = false
+		}
+	}
+
+	// Masters
+	for id, master := range currentState.masters {
+		if !master.isRegistered {
+			log.Print("Deregistering ", id)
+			m.registry.Deregister(&registry.Service{
+				ID:		id,
+				})
+			delete(currentState.masters, id)
+		} else {
+			master.isRegistered = false
 		}
 	}
 }

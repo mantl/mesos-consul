@@ -17,8 +17,7 @@ import (
 
 type Mesos struct {
 	registry	registry.RegistryAdapter
-	Leader		*MesosHost
-	Masters		*[]*MesosHost
+	Masters		*[]MesosHost
 	Lock		sync.Mutex
 }
 
