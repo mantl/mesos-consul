@@ -14,12 +14,21 @@ type Config struct {
 	Refresh		time.Duration
 }
 
+type ServiceCheck struct {
+	Script		string
+	Interval	string
+	Timeout		string
+	TTL		string
+	HTTP		string
+}
+
 type Service struct {
 	ID	string
 	Name	string
 	Port	int
 	IP	string
 	Tags	[]string
+	Check	*ServiceCheck
 }
 
 type AdapterFactory interface {

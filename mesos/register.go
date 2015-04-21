@@ -44,6 +44,11 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 				"follower",
 				}
 
+			c := new(registry.ServiceCheck)
+			c.HTTP = fmt.Sprintf("https://%s:%s/slave(1)/health", s.IP, s.Port)
+			c.Interval = "10s"
+			s.Check = c
+
 			log.Print("Registering: ", id)
 
 			err := m.registry.Register(s)
@@ -84,6 +89,11 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 				"leader",
 				}
 		}
+
+		c := new(registry.ServiceCheck)
+		c.HTTP = fmt.Sprintf("https://%s:%s/master/health", s.IP, s.Port)
+		c.Interval = "10s"
+		s.Check = c
 
 		log.Print("Registering: ", s.ID)
 		err := m.registry.Register(s)
