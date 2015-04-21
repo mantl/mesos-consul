@@ -93,7 +93,7 @@ func (m *Mesos) getMasters() []MesosHost {
 	defer m.Lock.Unlock()
 
 	ms := make([]MesosHost, len(*m.Masters))
-	for i, msp := range ms {
+	for i, msp := range *m.Masters {
 		mh := MesosHost{
 			host:		msp.host,
 			port:		msp.port,
