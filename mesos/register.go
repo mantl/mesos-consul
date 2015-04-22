@@ -45,7 +45,7 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 				}
 
 			c := new(registry.ServiceCheck)
-			c.HTTP = fmt.Sprintf("https://%s:%s/slave(1)/health", s.IP, s.Port)
+			c.HTTP = fmt.Sprintf("https://%s:%d/slave(1)/health", s.IP, s.Port)
 			c.Interval = "10s"
 			s.Check = c
 
@@ -91,7 +91,7 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 		}
 
 		c := new(registry.ServiceCheck)
-		c.HTTP = fmt.Sprintf("https://%s:%s/master/health", s.IP, s.Port)
+		c.HTTP = fmt.Sprintf("https://%s:%d/master/health", s.IP, s.Port)
 		c.Interval = "10s"
 		s.Check = c
 
