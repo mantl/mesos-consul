@@ -11,7 +11,7 @@ import (
 func cleanName(name string) string {
 	reg, err := regexp.Compile("[^\\w-.\\.]")
 	if err != nil {
-		log.Print(err)
+		log.Print("[WARN] ", err)
 		return name
 	}
 
@@ -48,7 +48,7 @@ func toIP(host string) string {
 func toPort(p string) int {
 	ps, err := strconv.Atoi(p)
 	if err != nil {
-		log.Printf("Invalid port number: %d", p)
+		log.Printf("[ERROR] Invalid port number: %d", p)
 	}
 
 	return ps

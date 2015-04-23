@@ -19,17 +19,17 @@ type SSL struct {
 
 type Config struct {
 	Refresh		time.Duration
-	Registry	string
 	RegistryAuth	*Auth
+	RegistryPort	string
 	RegistrySSL	*SSL
 	RegistryToken	string
 	Zk		string
+	LogLevel	string
 }
 
 func DefaultConfig() *Config {
 	return &Config{
 		Refresh:	time.Minute,
-		Registry:	"consul://127.0.0.1:8500",
 		RegistryAuth:	&Auth{
 			Enabled: false,
 		},
