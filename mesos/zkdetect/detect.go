@@ -20,6 +20,7 @@ package zkdetect
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"net/url"
 	"strconv"
@@ -29,7 +30,6 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	log "github.com/golang/glog"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 )
 
@@ -53,7 +53,7 @@ type ClusterDetector struct {
 func NewClusterDetector(zkurls string) (*ClusterDetector, error) {
 	zkHosts, zkPath, err := parseZk(zkurls)
 	if err != nil {
-		log.Fatalln("Failed to parse url", err)
+		log.Print("[ERROR] Failed to parse url", err)
 		return nil, err
 	}
 
@@ -66,14 +66,14 @@ func NewClusterDetector(zkurls string) (*ClusterDetector, error) {
 		client: client,
 	}
 
-	log.V(2).Infoln("Created new detector, watching ", zkHosts, zkPath)
+	log.Print("[INFO] Created new detector, watching ", zkHosts, zkPath)
 	return detector, nil
 }
 
 func parseZk(zkurls string) ([]string, string, error) {
 	u, err := url.Parse(zkurls)
 	if err != nil {
-		log.V(1).Infof("failed to parse url: %v", err)
+		log.Printf("[INFO] failed to parse url: %v", err)
 		return nil, "", err
 	}
 	if u.Scheme != "zk" {
@@ -95,10 +95,10 @@ func (md *ClusterDetector) Cancel() {
 //then we also probably want serial event delivery (aka. delivery via a chan) but then we
 //have to deal with chan buffer sizes .. ugh. This is probably the least painful for now.
 func (md *ClusterDetector) childrenChanged(zkc *Client, path string, obs ClusterChanged) {
-	log.V(2).Infof("fetching children at path '%v'", path)
+	log.Print("[INFO] fetching children at path '%v'", path)
 	list, err := zkc.list(path)
 	if err != nil {
-		log.Warning(err)
+		log.Print("[WARN] ", err)
 		return
 	}
 
@@ -125,20 +125,20 @@ if topNode == md.leaderNode {
 		seqStr := strings.TrimPrefix(v, nodePrefix)
 		_, err := strconv.ParseUint(seqStr, 10, 64)
 		if err != nil {
-			log.Warning("unexpected zk node format '%s': %v", seqStr, err)
+			log.Print("[WARN] unexpected zk node format '%s': %v", seqStr, err)
 			continue
 		}
 
 		data, err := zkc.data(fmt.Sprintf("%s/%s", path, v))
 		if err != nil {
-			log.Errorf("unable to retrieve master data: %v", err.Error())
+			log.Print("[ERROR] unable to retrieve master data: %v", err.Error())
 			return
 		}
 
 		masterInfo := new(mesos.MasterInfo)
 		err = proto.Unmarshal(data, masterInfo)
 		if err != nil {
-			log.Errorf("unable to unmarshall MasterInfo data from zookeeper: %v", err)
+			log.Print("[ERROR] unable to unmarshall MasterInfo data from zookeeper: %v", err)
 		}
 
 		if v == md.leaderNode {
@@ -148,7 +148,7 @@ if topNode == md.leaderNode {
 		}
 	}
 
-	log.V(2).Infof("detected cluster info: %+v",clusterInfo)
+	log.Print("[INFO] detected cluster info: %+v",clusterInfo)
 	obs.OnClusterChanged(clusterInfo)
 }
 
@@ -188,11 +188,11 @@ detectLoop:
 			if watchEnded, err := md.client.watchChildren(currentPath, ChildWatcher(func(zkc *Client, path string) {
 				md.childrenChanged(zkc, path, f)
 			})); err == nil {
-				log.V(2).Infoln("detector listener installed")
+				log.Print("[INFO] detector listener installed")
 				select {
 				case <-watchEnded:
 					if md.leaderNode != "" {
-						log.V(1).Infof("child watch ended, signaling master lost")
+						log.Printf("[INFO] child watch ended, signaling master lost")
 						md.leaderNode = ""
 						f.OnClusterChanged(nil)
 					}
@@ -200,13 +200,13 @@ detectLoop:
 					return
 				}
 			} else {
-				log.V(1).Infof("child watch ended with error: %v", err)
+				log.Printf("[INFO] child watch ended with error: %v", err)
 				continue detectLoop
 			}
 		}
 		// rate-limit master changes
 		if elapsed := time.Now().Sub(started); elapsed > 0 {
-			log.V(2).Infoln("resting before next detection cycle")
+			log.Print("[INFO] resting before next detection cycle")
 			select {
 			case <-md.Done():
 				return
@@ -226,7 +226,7 @@ func selectTopNode(list []string) (node string) {
 		seqStr := strings.TrimPrefix(v, nodePrefix)
 		seq, err := strconv.ParseUint(seqStr, 10, 64)
 		if err != nil {
-			log.Warningf("unexpected zk node format '%s': %v", seqStr, err)
+			log.Print("[WARN] unexpected zk node format '%s': %v", seqStr, err)
 			continue
 		}
 		if seq < leaderSeq {
@@ -236,9 +236,9 @@ func selectTopNode(list []string) (node string) {
 	}
 
 	if node == "" {
-		log.V(3).Infoln("No top node found.")
+		log.Print("[INFO] No top node found.")
 	} else {
-		log.V(3).Infof("Top node selected: '%s'", node)
+		log.Printf("[INFO] Top node selected: '%s'", node)
 	}
 	return node
 }

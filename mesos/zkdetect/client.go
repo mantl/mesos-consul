@@ -2,11 +2,11 @@ package zkdetect
 
 import (
 	"errors"
+	"log"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	log "github.com/golang/glog"
 	"github.com/samuel/go-zookeeper/zk"
 )
 
@@ -97,7 +97,7 @@ func (zkc *Client) connect() {
 		zkc.connectOnce.Do(func() {
 			if zkc.stateChange(disconnectedState, connectionRequestedState) {
 				if err := zkc.doConnect(); err != nil {
-					log.Error(err)
+					log.Print("[ERROR] ", err)
 					zkc.errorHandler(zkc, err)
 				}
 			}
@@ -113,7 +113,7 @@ func (zkc *Client) connect() {
 						return
 					case <-zkc.shouldReconn:
 						if err := zkc.reconnect(); err != nil {
-							log.Error(err)
+							log.Print("[ERROR] ", err)
 							zkc.errorHandler(zkc, err)
 						}
 					}
@@ -129,13 +129,13 @@ func (zkc *Client) connect() {
 // for at least reconnDelay before actually attempting to connect to zookeeper.
 func (zkc *Client) reconnect() error {
 	if !zkc.stateChange(disconnectedState, connectionRequestedState) {
-		log.V(4).Infoln("Ignoring reconnect, currently connected/connecting.")
+		log.Print("[INFO] Ignoring reconnect, currently connected/connecting.")
 		return nil
 	}
 
 	defer func() { zkc.reconnCount++ }()
 
-	log.V(4).Infoln("Delaying reconnection for ", zkc.reconnDelay)
+	log.Print("[INFO] Delaying reconnection for ", zkc.reconnDelay)
 	<-time.After(zkc.reconnDelay)
 
 	return zkc.doConnect()
@@ -143,7 +143,7 @@ func (zkc *Client) reconnect() error {
 
 func (zkc *Client) doConnect() error {
 	if !zkc.stateChange(connectionRequestedState, connectionAttemptState) {
-		log.V(4).Infoln("aborting doConnect, connection attempt already in progress or else disconnected")
+		log.Print("[INFO] aborting doConnect, connection attempt already in progress or else disconnected")
 		return nil
 	}
 
@@ -164,7 +164,7 @@ func (zkc *Client) doConnect() error {
 	zkc.conn = conn
 	zkc.connLock.Unlock()
 
-	log.V(4).Infof("Created connection object of type %T\n", conn)
+	log.Printf("[INFO] Created connection object of type %T\n", conn)
 	connected := make(chan struct{})
 	sessionExpired := make(chan struct{})
 	go func() {
@@ -176,7 +176,7 @@ func (zkc *Client) doConnect() error {
 	select {
 	case <-connected:
 		if !zkc.stateChange(connectionAttemptState, connectedState) {
-			log.V(4).Infoln("failed to transition to connected state")
+			log.Print("[INFO] failed to transition to connected state")
 			// we could be:
 			// - disconnected        ... reconnect() will try to connect again, otherwise;
 			// - connected           ... another goroutine already established a connection
@@ -190,7 +190,7 @@ func (zkc *Client) doConnect() error {
 			default: // message buf full, this becomes a non-blocking noop
 			}
 		}
-		log.Infoln("zookeeper client connected")
+		log.Print("[INFO] zookeeper client connected")
 	case <-sessionExpired:
 		// connection was disconnected before it was ever really 'connected'
 		if !zkc.stateChange(connectionAttemptState, disconnectedState) {
@@ -237,12 +237,12 @@ func (zkc *Client) monitorSession(sessionEvents <-chan zk.Event, connected chan 
 				zkc.onDisconnected()
 				return
 			} else if e.Err != nil {
-				log.Errorf("received state error: %s", e.Err.Error())
+				log.Printf("[ERROR] received state error: %s", e.Err.Error())
 				zkc.errorHandler(zkc, e.Err)
 			}
 			switch e.State {
 			case zk.StateConnecting:
-				log.Infoln("connecting to zookeeper..")
+				log.Print("[INFO] connecting to zookeeper..")
 
 			case zk.StateConnected:
 				if firstConnected {
@@ -251,13 +251,13 @@ func (zkc *Client) monitorSession(sessionEvents <-chan zk.Event, connected chan 
 				}
 
 			case zk.StateSyncConnected:
-				log.Infoln("syncConnected to zookper server")
+				log.Print("[INFO] syncConnected to zookper server")
 
 			case zk.StateDisconnected:
-				log.Infoln("zookeeper client disconnected")
+				log.Print("[INFO] zookeeper client disconnected")
 
 			case zk.StateExpired:
-				log.Infoln("zookeeper client session expired")
+				log.Print("[INFO] zookeeper client session expired")
 			}
 		}
 	}
@@ -279,7 +279,7 @@ func (zkc *Client) watchChildren(path string, watcher ChildWatcher) (<-chan stru
 		watchPath = watchPath + path
 	}
 
-	log.V(2).Infoln("Watching children for path", watchPath)
+	log.Print("[INFO] Watching children for path", watchPath)
 	_, _, ch, err := zkc.conn.ChildrenW(watchPath)
 	if err != nil {
 		return nil, err
@@ -309,13 +309,13 @@ watchLoop:
 			return
 		case e, ok := <-zkevents:
 			if !ok {
-				log.Warningf("expected a single zk event before channel close")
+				log.Print("[WARN] expected a single zk event before channel close")
 				break // the select
 			}
 			switch e.Type {
 			//TODO(jdef) should we not also watch for EventNode{Created,Deleted,DataChanged}?
 			case zk.EventNodeChildrenChanged:
-				log.V(2).Infoln("Handling: zk.EventNodeChildrenChanged")
+				log.Print("[INFO] Handling: zk.EventNodeChildrenChanged")
 				watcher(zkc, e.Path)
 				continue
 			default:
@@ -323,12 +323,12 @@ watchLoop:
 					zkc.errorHandler(zkc, e.Err)
 					if e.Type == zk.EventNotWatching && e.State == zk.StateDisconnected {
 						if e.Err == zk.ErrClosing {
-							log.V(1).Infof("watch invalidated, embedded client terminating")
+							log.Printf("[INFO] watch invalidated, embedded client terminating")
 							return
 						}
-						log.V(1).Infof("watch invalidated, attempting to watch again: %v", e.Err)
+						log.Printf("[INFO] watch invalidated, attempting to watch again: %v", e.Err)
 					} else {
-						log.Warningf("received error while watching path %s: %s", watchPath, e.Err.Error())
+						log.Print("[WARN] received error while watching path %s: %s", watchPath, e.Err.Error())
 					}
 				}
 			}
@@ -341,7 +341,7 @@ watchLoop:
 			//As it currently stands, if the embedded client cycles fast enough, we may actually not notice it here
 			//and keep on watching like nothing bad happened.
 			if !zkc.isConnected() {
-				log.Warningf("no longer connected to server, exiting child watch")
+				log.Print("[WARN] no longer connected to server, exiting child watch")
 				return
 			}
 			select {
@@ -351,10 +351,10 @@ watchLoop:
 			}
 			_, _, zkevents, err = zkc.conn.ChildrenW(watchPath)
 			if err == nil {
-				log.V(2).Infoln("rewatching children for path", watchPath)
+				log.Print("[INFO] rewatching children for path", watchPath)
 				continue watchLoop
 			}
-			log.V(1).Infof("unable to watch children for path %s: %s", watchPath, err.Error())
+			log.Printf("[INFO] unable to watch children for path %s: %s", watchPath, err.Error())
 			zkc.errorHandler(zkc, err)
 		}
 	}
@@ -362,7 +362,7 @@ watchLoop:
 
 func (zkc *Client) onDisconnected() {
 	if st := zkc.getState(); st == connectedState && zkc.stateChange(st, disconnectedState) {
-		log.Infoln("disconnected from the server, reconnecting...")
+		log.Print("[INFO] disconnected from the server, reconnecting...")
 		zkc.requestReconnect()
 		return
 	}

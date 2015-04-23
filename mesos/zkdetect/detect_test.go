@@ -3,14 +3,13 @@ package zkdetect
 import (
 	"errors"
 	"fmt"
+	"log"
 	"sort"
 	"sync"
 	"testing"
 	"time"
 
 	log "github.com/golang/glog"
-//	"github.com/mesos/mesos-go/detector"
-//	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/stretchr/testify/assert"
 )
@@ -309,7 +308,7 @@ func TestClusterDetectMultiple(t *testing.T) {
 
 	first := true
 	c.setFactory(asFactory(func() (Connector, <-chan zk.Event, error) {
-		log.V(2).Infof("**** Using zk.Conn adapter ****")
+		log.Print("[INFO] **** Using zk.Conn adapter ****")
 		if !first {
 			return nil, nil, errors.New("only 1 connector allowed")
 		} else {
