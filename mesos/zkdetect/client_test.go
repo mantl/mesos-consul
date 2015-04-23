@@ -3,13 +3,13 @@ package zkdetect
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	log "github.com/golang/glog"
 	util "github.com/mesos/mesos-go/mesosutil"
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/stretchr/testify/assert"
@@ -73,7 +73,7 @@ func TestClient_FlappingConnection(t *testing.T) {
 
 	attempts := 0
 	c.setFactory(asFactory(func() (Connector, <-chan zk.Event, error) {
-		log.V(2).Infof("**** Using zk.Conn adapter ****")
+		log.Printf("[INFO] **** Using zk.Conn adapter ****")
 		ch0 := make(chan zk.Event, 10) // session chan
 		ch1 := make(chan zk.Event)     // watch chan
 		go func() {
@@ -118,7 +118,7 @@ func TestClientWatchChildren(t *testing.T) {
 	assert.NoError(t, err)
 	wCh := make(chan struct{}, 1)
 	childrenWatcher := ChildWatcher(func(zkc *Client, path string) {
-		log.V(4).Infoln("Path", path, "changed!")
+		log.Print("[INFO] Path", path, "changed!")
 		children, err := c.list(path)
 		assert.NoError(t, err)
 		assert.Equal(t, 3, len(children))
@@ -201,7 +201,7 @@ func makeClient() (*Client, error) {
 		} else {
 			first = false
 		}
-		log.V(2).Infof("**** Using zk.Conn adapter ****")
+		log.Printf("[INFO] **** Using zk.Conn adapter ****")
 		connector := makeMockConnector(test_zk_path, ch1)
 		return connector, ch0, nil
 	}))
@@ -210,7 +210,7 @@ func makeClient() (*Client, error) {
 }
 
 func makeMockConnector(path string, chEvent <-chan zk.Event) *MockConnector {
-	log.V(2).Infoln("Making Connector mock.")
+	log.Print("[INFO] Making Connector mock.")
 	conn := NewMockConnector()
 	conn.On("Close").Return(nil)
 	conn.On("ChildrenW", path).Return([]string{path}, &zk.Stat{}, chEvent, nil)

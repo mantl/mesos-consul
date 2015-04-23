@@ -17,25 +17,25 @@ import (
 
 func (m *Mesos) zkDetector(zkURI string) {
 	if (zkURI == "") {
-		log.Fatal("Zookeeper address not provided")
+		log.Fatal("[ERROR] Zookeeper address not provided")
 	}
 
 	dr, err := m.leaderDetect(zkURI)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatal("[ERROR] ", err.Error())
 	}
 
-	log.Print("Waiting for initial leader information from Zookeeper")
+	log.Print("[INFO] Waiting for initial leader information from Zookeeper")
 	select {
 	case <-dr:
-		log.Print("Done waiting for initial leader information from Zookeeper")
+		log.Print("[INFO] Done waiting for initial leader information from Zookeeper")
 	case <-time.After(2 * time.Minute):
-		log.Fatal("Timed out waiting for initial ZK detection")
+		log.Fatal("[ERROR] Timed out waiting for initial ZK detection")
 	}
 }
 
 func (m *Mesos) leaderDetect(zkURI string) (<-chan struct{}, error) {
-	log.Print("Starting leader detector for ZK ", zkURI)
+	log.Print("[INFO] Starting leader detector for ZK ", zkURI)
 	//md, err := detector.New(zkURI)
 	md, err := zoo.NewClusterDetector(zkURI)
 	if err != nil {

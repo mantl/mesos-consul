@@ -12,23 +12,25 @@ import (
 	"sync"
 
 	"github.com/CiscoCloud/mesos-consul/config"
-	"github.com/CiscoCloud/mesos-consul/registry"
+	"github.com/CiscoCloud/mesos-consul/consul"
+
+	consulapi "github.com/hashicorp/consul/api"
 )
 
 type Mesos struct {
-	registry	registry.RegistryAdapter
+	Consul		*consul.Consul
 	Masters		*[]MesosHost
 	Lock		sync.Mutex
 }
 
-func New(c *config.Config, r registry.RegistryAdapter) *Mesos{
+func New(c *config.Config, consul *consul.Consul) *Mesos{
 	m := new(Mesos)
-
-	m.registry = r
 
 	if c.Zk == "" {
 		return nil
 	}
+
+	m.Consul = consul
 
 	m.zkDetector(c.Zk)
 
@@ -38,7 +40,7 @@ func New(c *config.Config, r registry.RegistryAdapter) *Mesos{
 func (m *Mesos) Refresh() error {
 	sj, err := m.loadState()
 	if err != nil {
-		log.Print("No master")
+		log.Print("[ERROR] No master")
 		return err
 	}
 	
@@ -66,13 +68,13 @@ func (m *Mesos) loadState() (StateJSON, error) {
 		return sj, errors.New("No master in zookeeper")
 	}
 
-	log.Printf("Zookeeper leader: %s:%s", ip, port)
+	log.Printf("[INFO] Zookeeper leader: %s:%s", ip, port)
 
-	log.Print("reloading from master ", ip)
+	log.Print("[INFO] reloading from master ", ip)
 	sj = m.loadFromMaster(ip, port)
 
 	if rip := leaderIP(sj.Leader); rip != ip {
-		log.Print("Warning: master changed to ", rip)
+		log.Print("[WARN] master changed to ", rip)
 		sj = m.loadFromMaster(rip, port)
 	}
 
@@ -88,28 +90,28 @@ func (m *Mesos) loadFromMaster(ip string, port string) (sj StateJSON) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("[ERROR] ", err)
 	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("[ERROR] ", err)
 	}
 
 	err = json.Unmarshal(body, &sj)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("[ERROR] ", err)
 	}
 
 	return sj
 }
 
 func (m *Mesos) parseState(sj StateJSON) {
-	log.Print("Running parseState")
+	log.Print("[INFO] Running parseState")
 
 	m.RegisterHosts(sj)
-	log.Print("Done running RegisterHosts")
+	log.Print("[DEBUG] Done running RegisterHosts")
 
 	for _, fw := range sj.Frameworks {
 		for _, task := range fw.Tasks {
@@ -118,13 +120,12 @@ func (m *Mesos) parseState(sj StateJSON) {
 				tname := cleanName(task.Name)
 				if task.Resources.Ports != "" {
 					for _, port := range yankPorts(task.Resources.Ports) {
-						s := new(registry.Service)
-						s.ID = fmt.Sprintf("%s:%s:%d", host, tname, port)
-						s.Name = tname
-						s.Port = port
-						s.IP = toIP(host)
-
-						m.register(s)
+						m.register(&consulapi.AgentServiceRegistration{
+							ID:	fmt.Sprintf("%s:%s:%d",host,tname,port),
+							Name:	tname,
+							Port:	port,
+							Address: toIP(host),
+							})
 					}
 				}
 			}

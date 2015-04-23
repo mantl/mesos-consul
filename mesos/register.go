@@ -4,161 +4,100 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/CiscoCloud/mesos-consul/registry"
+	consulapi "github.com/hashicorp/consul/api"
 )
 
-type registryState struct {
-	services	map[string]bool
-	followers	map[string]bool
-	masters		map[string]MesosHost
+type cacheEntry struct {
+	service		*consulapi.AgentServiceRegistration
+	isRegistered	bool
 }
 
-
-var currentState = registryState{
-	services:	make(map[string]bool),
-	followers:	make(map[string]bool),
-	masters:	make(map[string]MesosHost),
-}
+var cache = make(map[string]*cacheEntry)
 
 func (m *Mesos) RegisterHosts(sj StateJSON) {
-	log.Print("Running RegisterHosts")
+	log.Print("[INFO] Running RegisterHosts")
 
 	// Register followers
 	for _, f := range sj.Followers {
-		id := fmt.Sprintf("%s:%s", f.Id, f.Hostname)
-		if _, ok := currentState.followers[id]; ok {
-			log.Printf("Id found: '%s': Not registering", id)
-			currentState.followers[id] = true
-		} else {
-			currentState.followers[id] = true
+		h, p := parsePID(f.Pid)
+		host := toIP(h)
+		port := toPort(p)
 
-			s := new(registry.Service)
-
-			host, port := parsePID(f.Pid)
-
-			s.ID	= id
-			s.Name	= "mesos"
-			s.Port	= toPort(port)
-			s.IP	= toIP(host)
-			s.Tags	= []string{
-				"follower",
-				}
-
-			c := new(registry.ServiceCheck)
-			c.HTTP = fmt.Sprintf("http://%s:%d/slave(1)/health", s.IP, s.Port)
-			c.Interval = "10s"
-			s.Check = c
-
-			log.Print("Registering: ", id)
-
-			err := m.registry.Register(s)
-			if err != nil {
-				log.Print(err)
-			}
-		}
+		m.register(&consulapi.AgentServiceRegistration{
+			ID:		fmt.Sprintf("%s:%s", f.Id, f.Hostname),
+			Name:		"mesos",
+			Port:		port,
+			Address:	host,
+			Tags:		[]string{ "follower" },
+			Check:		&consulapi.AgentServiceCheck{
+				HTTP:		fmt.Sprintf("http://%s:%d/slave(1)/health", host, port),
+				Interval:	"10s",
+			},
+		})
 	}
 
 	// Register masters
 	mas := m.getMasters()
 	for _, ma := range mas {
-		id := fmt.Sprintf("%s:%s", ma.host, ma.port)
-		if master, ok := currentState.masters[id]; ok {
-			// Master has been found. Only update if the leader status has changed
-			if ma.isLeader ==  master.isLeader {
-				master.isRegistered = true
-				log.Printf("Master state unchanged, not registering: '%s'", id)
-				continue
-			}
-		}
+		var tags []string
 
-		ma.isRegistered = true
-		currentState.masters[id] = ma
-
-		s := new(registry.Service)
-		s.ID	= fmt.Sprintf("mesos:%s:%s", ma.host, ma.port)
-		s.Name	= "mesos"
-		s.Port	= toPort(ma.port)
-		s.IP	= toIP(ma.host)
 		if ma.isLeader {
-			s.Tags	= []string{
-				"master",
-				}
+			tags = []string{ "leader", "master" }
 		} else {
-			s.Tags	= []string{
-				"master",
-				"leader",
-				}
+			tags = []string{ "master" }
+		}
+		host := toIP(ma.host)
+		port := toPort(ma.port)
+		s := &consulapi.AgentServiceRegistration{
+			ID:		fmt.Sprintf("mesos:%s:%s", ma.host, ma.port),
+			Name:		"mesos",
+			Port:		port,
+			Address:	host,
+			Tags:		tags,
+			Check:		&consulapi.AgentServiceCheck{
+				HTTP:		fmt.Sprintf("http://%s:%d/master/health", host, port),
+				Interval:	"10s",
+			},
 		}
 
-		c := new(registry.ServiceCheck)
-		c.HTTP = fmt.Sprintf("http://%s:%d/master/health", s.IP, s.Port)
-		c.Interval = "10s"
-		s.Check = c
-
-		log.Print("Registering: ", s.ID)
-		err := m.registry.Register(s)
+		err := m.Consul.Register(s)
 		if err != nil {
-			log.Print(err)
+			log.Print("[ERROR] ", err)
 		}
 	}
 }
 
-func (m *Mesos) register(s *registry.Service) {
-	if _, ok := currentState.services[s.ID]; ok {
-		log.Printf("Service found. Not registering: %s", s.ID)
-		currentState.services[s.ID] = true
+func (m *Mesos) register(s *consulapi.AgentServiceRegistration) {
+	if _, ok := cache[s.ID]; ok {
+		log.Printf("[INFO] Service found. Not registering: %s", s.ID)
+		cache[s.ID].isRegistered = true
 		return
 	}
 
-	log.Print("Registering ", s.ID)
+	log.Print("[INFO] Registering ", s.ID)
 
-	currentState.services[s.ID] = true
-	err := m.registry.Register(s)
+	cache[s.ID] = &cacheEntry{
+		service:		s,
+		isRegistered:		true,
+	}
+
+	err := m.Consul.Register(s)
 	if err != nil {
-		log.Print(err)
+		log.Print("[ERROR] ", err)
 	}
 }
 
 // deregister items that have gone away
 //
 func (m *Mesos) deregister() {
-	// Services
-	for s, b := range currentState.services {
-		if !b {
-			log.Print("Deregistering ", s)
-			m.registry.Deregister(&registry.Service{
-				ID:		s,
-				})
+	for s, b := range cache {
+		if !b.isRegistered {
+			log.Print("[INFO] Deregistering ", s)
+			m.Consul.Deregister(b.service)
 
-			delete(currentState.services, s)
+			delete(cache, s)
 		} else {
-			currentState.services[s] = false
-		}
-	}
-
-	// Followers
-	for id, isRegistered := range currentState.followers {
-		if !isRegistered {
-			log.Print("Deregistering ", id)
-			m.registry.Deregister(&registry.Service{
-				ID:		id,
-				})
-			delete(currentState.followers, id)
-		} else {
-			currentState.followers[id] = false
-		}
-	}
-
-	// Masters
-	for id, master := range currentState.masters {
-		if !master.isRegistered {
-			log.Print("Deregistering ", id)
-			m.registry.Deregister(&registry.Service{
-				ID:		id,
-				})
-			delete(currentState.masters, id)
-		} else {
-			master.isRegistered = false
+			cache[s].isRegistered = false
 		}
 	}
 }

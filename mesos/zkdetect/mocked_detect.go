@@ -3,10 +3,10 @@ package zkdetect
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/url"
 
 	"github.com/gogo/protobuf/proto"
-	log "github.com/golang/glog"
 	util "github.com/mesos/mesos-go/mesosutil"
 	"github.com/samuel/go-zookeeper/zk"
 )
@@ -19,7 +19,7 @@ type MockClusterDetector struct {
 }
 
 func NewMockClusterDetector(zkurls string) (*MockClusterDetector, error) {
-	log.V(4).Infoln("Creating mock zk master detector")
+	log.Print("[INFO] Creating mock zk master detector")
 	md, err := NewClusterDetector(zkurls)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (m *MockClusterDetector) Start() {
 }
 
 func (m *MockClusterDetector) ScheduleConnEvent(s zk.State) {
-	log.V(4).Infof("Scheduling zk connection event with state: %v\n", s)
+	log.Printf("[INFO] Scheduling zk connection event with state: %v\n", s)
 	go func() {
 		m.conCh <- zk.Event{
 			State: s,
@@ -68,7 +68,7 @@ func (m *MockClusterDetector) ScheduleConnEvent(s zk.State) {
 }
 
 func (m *MockClusterDetector) ScheduleSessEvent(t zk.EventType) {
-	log.V(4).Infof("Scheduling zk session event with state: %v\n", t)
+	log.Printf("[INFO] Scheduling zk session event with state: %v\n", t)
 	go func() {
 		m.sesCh <- zk.Event{
 			Type: t,
