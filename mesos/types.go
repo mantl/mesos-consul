@@ -35,4 +35,6 @@ type StateJSON struct {
 type MesosHost struct {
 	host		string
 	port		string
+	isLeader	bool
+	isRegistered	bool
 }

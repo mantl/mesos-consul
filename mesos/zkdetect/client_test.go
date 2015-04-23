@@ -1,4 +1,4 @@
-package zoo
+package zkdetect
 
 import (
 	"errors"
@@ -215,13 +215,15 @@ func makeMockConnector(path string, chEvent <-chan zk.Event) *MockConnector {
 	conn.On("Close").Return(nil)
 	conn.On("ChildrenW", path).Return([]string{path}, &zk.Stat{}, chEvent, nil)
 	conn.On("Children", path).Return([]string{"info_0", "info_5", "info_10"}, &zk.Stat{}, nil)
-	conn.On("Get", fmt.Sprintf("%s/info_0", path)).Return(makeTestMasterInfo(), &zk.Stat{}, nil)
+	conn.On("Get", fmt.Sprintf("%s/info_0", path)).Return(makeTestClusterInfo(), &zk.Stat{}, nil)
+	conn.On("Get", fmt.Sprintf("%s/info_5", path)).Return(makeTestClusterInfo(), &zk.Stat{}, nil)
+	conn.On("Get", fmt.Sprintf("%s/info_10", path)).Return(makeTestClusterInfo(), &zk.Stat{}, nil)
 
 	return conn
 }
 
-func newTestMasterInfo(id int) []byte {
-	miPb := util.NewMasterInfo(fmt.Sprintf("master(%d)@localhost:5050", id), 123456789, 400)
+func newTestClusterInfo(id string) []byte {
+	miPb := util.NewMasterInfo(fmt.Sprintf("master(%s)@localhost:5050", id), 123456789, 400)
 	data, err := proto.Marshal(miPb)
 	if err != nil {
 		panic(err)
@@ -229,7 +231,7 @@ func newTestMasterInfo(id int) []byte {
 	return data
 }
 
-func makeTestMasterInfo() []byte {
+func makeTestClusterInfo() []byte {
 	miPb := util.NewMasterInfo("master@localhost:5050", 123456789, 400)
 	data, err := proto.Marshal(miPb)
 	if err != nil {

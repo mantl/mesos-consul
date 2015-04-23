@@ -68,9 +68,20 @@ func (r *ConsulAdapter) Register(service *registry.Service) error {
 	registration.Port	= service.Port
 	registration.Tags	= service.Tags
 	registration.Address	= service.IP
+	registration.Check	= toConsulCheck(service.Check)
 	return r.client.Agent().ServiceRegister(registration)
 }
 
 func (r *ConsulAdapter) Deregister(service *registry.Service) error {
 	return r.client.Agent().ServiceDeregister(service.ID)
+}
+
+func toConsulCheck(c *registry.ServiceCheck) *consulapi.AgentServiceCheck {
+	check := new(consulapi.AgentServiceCheck)
+	check.Script		= c.Script
+	check.Interval		= c.Interval
+	check.Timeout		= c.Timeout
+	check.TTL		= c.TTL
+	check.HTTP		= c.HTTP
+	return check
 }

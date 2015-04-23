@@ -1,4 +1,4 @@
-package zoo
+package zkdetect
 
 import (
 	"errors"
@@ -11,23 +11,23 @@ import (
 	"github.com/samuel/go-zookeeper/zk"
 )
 
-type MockMasterDetector struct {
-	*MasterDetector
+type MockClusterDetector struct {
+	*ClusterDetector
 	zkPath string
 	conCh  chan zk.Event
 	sesCh  chan zk.Event
 }
 
-func NewMockMasterDetector(zkurls string) (*MockMasterDetector, error) {
+func NewMockClusterDetector(zkurls string) (*MockClusterDetector, error) {
 	log.V(4).Infoln("Creating mock zk master detector")
-	md, err := NewMasterDetector(zkurls)
+	md, err := NewClusterDetector(zkurls)
 	if err != nil {
 		return nil, err
 	}
 
 	u, _ := url.Parse(zkurls)
-	m := &MockMasterDetector{
-		MasterDetector: md,
+	m := &MockClusterDetector{
+		ClusterDetector: md,
 		zkPath:         u.Path,
 		conCh:          make(chan zk.Event, 5),
 		sesCh:          make(chan zk.Event, 5),
@@ -36,7 +36,7 @@ func NewMockMasterDetector(zkurls string) (*MockMasterDetector, error) {
 	path := m.zkPath
 	connector := NewMockConnector()
 	connector.On("Children", path).Return([]string{"info_0", "info_5", "info_10"}, &zk.Stat{}, nil)
-	connector.On("Get", fmt.Sprintf("%s/info_0", path)).Return(m.makeMasterInfo(), &zk.Stat{}, nil)
+	connector.On("Get", fmt.Sprintf("%s/info_0", path)).Return(m.makeClusterInfo(), &zk.Stat{}, nil)
 	connector.On("Close").Return(nil)
 	connector.On("ChildrenW", m.zkPath).Return([]string{m.zkPath}, &zk.Stat{}, (<-chan zk.Event)(m.sesCh), nil)
 
@@ -53,11 +53,11 @@ func NewMockMasterDetector(zkurls string) (*MockMasterDetector, error) {
 	return m, nil
 }
 
-func (m *MockMasterDetector) Start() {
+func (m *MockClusterDetector) Start() {
 	m.client.connect()
 }
 
-func (m *MockMasterDetector) ScheduleConnEvent(s zk.State) {
+func (m *MockClusterDetector) ScheduleConnEvent(s zk.State) {
 	log.V(4).Infof("Scheduling zk connection event with state: %v\n", s)
 	go func() {
 		m.conCh <- zk.Event{
@@ -67,7 +67,7 @@ func (m *MockMasterDetector) ScheduleConnEvent(s zk.State) {
 	}()
 }
 
-func (m *MockMasterDetector) ScheduleSessEvent(t zk.EventType) {
+func (m *MockClusterDetector) ScheduleSessEvent(t zk.EventType) {
 	log.V(4).Infof("Scheduling zk session event with state: %v\n", t)
 	go func() {
 		m.sesCh <- zk.Event{
@@ -77,7 +77,7 @@ func (m *MockMasterDetector) ScheduleSessEvent(t zk.EventType) {
 	}()
 }
 
-func (m *MockMasterDetector) makeMasterInfo() []byte {
+func (m *MockClusterDetector) makeClusterInfo() []byte {
 	miPb := util.NewMasterInfo("master", 123456789, 400)
 	miPb.Pid = proto.String("master@127.0.0.1:5050")
 	data, err := proto.Marshal(miPb)

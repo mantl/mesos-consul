@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package zoo
+package zkdetect
 
 import (
 	"fmt"
@@ -30,7 +30,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	log "github.com/golang/glog"
-	"github.com/mesos/mesos-go/detector"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 )
 
@@ -40,10 +39,10 @@ const (
 )
 
 // reasonable default for a noop change listener
-var ignoreChanged = detector.OnMasterChanged(func(*mesos.MasterInfo) {})
+var ignoreChanged = OnClusterChanged(func(*ClusterInfo) {})
 
 // Detector uses ZooKeeper to detect new leading master.
-type MasterDetector struct {
+type ClusterDetector struct {
 	client          *Client
 	leaderNode      string
 	bootstrap       sync.Once // for one-time zk client initiation
@@ -51,7 +50,7 @@ type MasterDetector struct {
 }
 
 // Internal constructor function
-func NewMasterDetector(zkurls string) (*MasterDetector, error) {
+func NewClusterDetector(zkurls string) (*ClusterDetector, error) {
 	zkHosts, zkPath, err := parseZk(zkurls)
 	if err != nil {
 		log.Fatalln("Failed to parse url", err)
@@ -63,7 +62,7 @@ func NewMasterDetector(zkurls string) (*MasterDetector, error) {
 		return nil, err
 	}
 
-	detector := &MasterDetector{
+	detector := &ClusterDetector{
 		client: client,
 	}
 
@@ -84,18 +83,18 @@ func parseZk(zkurls string) ([]string, string, error) {
 }
 
 // returns a chan that, when closed, indicates termination of the detector
-func (md *MasterDetector) Done() <-chan struct{} {
+func (md *ClusterDetector) Done() <-chan struct{} {
 	return md.client.stopped()
 }
 
-func (md *MasterDetector) Cancel() {
+func (md *ClusterDetector) Cancel() {
 	md.client.stop()
 }
 
 //TODO(jdef) execute async because we don't want to stall our client's event loop? if so
 //then we also probably want serial event delivery (aka. delivery via a chan) but then we
 //have to deal with chan buffer sizes .. ugh. This is probably the least painful for now.
-func (md *MasterDetector) childrenChanged(zkc *Client, path string, obs detector.MasterChanged) {
+func (md *ClusterDetector) childrenChanged(zkc *Client, path string, obs ClusterChanged) {
 	log.V(2).Infof("fetching children at path '%v'", path)
 	list, err := zkc.list(path)
 	if err != nil {
@@ -103,40 +102,61 @@ func (md *MasterDetector) childrenChanged(zkc *Client, path string, obs detector
 		return
 	}
 
+	// topNode is the leader node
 	topNode := selectTopNode(list)
 
-	if md.leaderNode == topNode {
-		log.V(2).Infof("ignoring children-changed event, leader has not changed: %v", path)
-		return
-	}
+if topNode == md.leaderNode {
+	fmt.Println("Ignoring children changed event")
+} else {
+	fmt.Println("Changing leader node")
+}
 
-	log.V(2).Infof("changing leader node from %s -> %s", md.leaderNode, topNode)
 	md.leaderNode = topNode
 
-	var masterInfo *mesos.MasterInfo
-	if md.leaderNode != "" {
-		data, err := zkc.data(fmt.Sprintf("%s/%s", path, topNode))
+	var clusterInfo = new(ClusterInfo)
+
+	clusterInfo.Masters = new([]*mesos.MasterInfo)
+
+	for _, v := range list {
+		if (!strings.HasPrefix(v, nodePrefix)) {
+			continue
+		}
+
+		seqStr := strings.TrimPrefix(v, nodePrefix)
+		_, err := strconv.ParseUint(seqStr, 10, 64)
 		if err != nil {
-			log.Errorf("unable to retrieve leader data: %v", err.Error())
+			log.Warning("unexpected zk node format '%s': %v", seqStr, err)
+			continue
+		}
+
+		data, err := zkc.data(fmt.Sprintf("%s/%s", path, v))
+		if err != nil {
+			log.Errorf("unable to retrieve master data: %v", err.Error())
 			return
 		}
 
-		masterInfo = new(mesos.MasterInfo)
+		masterInfo := new(mesos.MasterInfo)
 		err = proto.Unmarshal(data, masterInfo)
 		if err != nil {
 			log.Errorf("unable to unmarshall MasterInfo data from zookeeper: %v", err)
-			return
+		}
+
+		if v == md.leaderNode {
+			clusterInfo.Leader = masterInfo
+		} else {
+			*clusterInfo.Masters = append(*clusterInfo.Masters, masterInfo)
 		}
 	}
-	log.V(2).Infof("detected master info: %+v", masterInfo)
-	obs.OnMasterChanged(masterInfo)
+
+	log.V(2).Infof("detected cluster info: %+v",clusterInfo)
+	obs.OnClusterChanged(clusterInfo)
 }
 
 // the first call to Detect will kickstart a connection to zookeeper. a nil change listener may
 // be spec'd, result of which is a detector that will still listen for master changes and record
 // leaderhip changes internally but no listener would be notified. Detect may be called more than
 // once, and each time the spec'd listener will be added to the list of those receiving notifications.
-func (md *MasterDetector) Detect(f detector.MasterChanged) (err error) {
+func (md *ClusterDetector) Detect(f ClusterChanged) (err error) {
 	// kickstart zk client connectivity
 	md.bootstrap.Do(func() { go md.client.connect() })
 
@@ -153,7 +173,7 @@ func (md *MasterDetector) Detect(f detector.MasterChanged) (err error) {
 	return nil
 }
 
-func (md *MasterDetector) detect(f detector.MasterChanged) {
+func (md *ClusterDetector) detect(f ClusterChanged) {
 
 	minCyclePeriod := 1 * time.Second
 detectLoop:
@@ -174,7 +194,7 @@ detectLoop:
 					if md.leaderNode != "" {
 						log.V(1).Infof("child watch ended, signaling master lost")
 						md.leaderNode = ""
-						f.OnMasterChanged(nil)
+						f.OnClusterChanged(nil)
 					}
 				case <-md.client.stopped():
 					return

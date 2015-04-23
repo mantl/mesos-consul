@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package zoo
+package zkdetect
 
 import (
 	"github.com/samuel/go-zookeeper/zk"
