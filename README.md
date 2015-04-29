@@ -11,7 +11,6 @@ Usage
 |         Option        | Description |
 |-----------------------|-------------|
 | `refresh`             | Time between refreshes of Mesos tasks
-| `registry`*           | Location of the registry instance. The default value is consul://127.0.0.1:8500
 | `registry-auth`       | The basic authentication username (and optional password), separated by a colon.
 | `registry-ssl`        | Use HTTPS while talking to the registry.
 | `registry-ssl-verify` | Verify certificates when connecting via SSL.
@@ -37,6 +36,5 @@ Tasks are registered as `task_name.service.consul`
 
 ### Todo
   * Add support for tags
-  * Automatic registration of Master nodes
   * Use task labels for metadata
   * Support for multiple port tasks
