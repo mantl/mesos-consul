@@ -1,4 +1,5 @@
 # mesos-consul
+
 Mesos to Consul bridge for service discovery. 
 
 Mesos-consul automatically registers/deregisters services run as Mesos tasks.
@@ -7,7 +8,26 @@ This means if you have a Mesos task called `application`, this program will regi
 
 This program also does Mesos leader discovery, so that `leader.mesos.service.consul` will point to the current leader.
 
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc/generate-toc again -->
+**Table of Contents**
+
+- [mesos-consul](#mesos-consul)
+    - [Comparisons to other discovery software](#comparisons-to-other-discovery-software)
+        - [[Mesos-dns](https://github.com/mesosphere/mesos-dns/)](#mesos-dnshttpsgithubcommesospheremesos-dns)
+        - [[Registrator](https://github.com/gliderlabs/registrator)](#registratorhttpsgithubcomgliderlabsregistrator)
+    - [Building](#building)
+    - [Running](#running)
+    - [Usage](#usage)
+        - [Options](#options)
+        - [Consul Registration](#consul-registration)
+            - [Leader, Master and Follower Nodes](#leader-master-and-follower-nodes)
+            - [Mesos Tasks](#mesos-tasks)
+    - [Todo](#todo)
+
+<!-- markdown-toc end -->
+
 ## Comparisons to other discovery software
+
 ### [Mesos-dns](https://github.com/mesosphere/mesos-dns/)
 This project is similar to mesos-dns in that it polls Mesos to get information about tasks. However, instead of exposing this information via a built-in DNS server, we populate Consul service discovery with this information. Consul then exposes the services via DNS and via its API.
 
@@ -19,6 +39,7 @@ Benefits of using Consul:
 
 
 ### [Registrator](https://github.com/gliderlabs/registrator)
+
 Registrator is another tool that populates Consul (and other backends like etcd) with the status of Docker containers. However, Registrator is currently limited to reporting on Docker containers and does not track Mesos tasks.
 
 ## Building
@@ -60,9 +81,10 @@ Where `mesos-consul.json` is similar to (replacing the image with your image):
 You can add options to authenticate via basic http or Consul token.
 
 
-Usage
------
+## Usage
+
 ### Options
+
 |         Option        | Description |
 |-----------------------|-------------|
 | `refresh`             | Time between refreshes of Mesos tasks
@@ -77,7 +99,7 @@ Usage
 
 ### Consul Registration
 
-##### Leader, Master and Follower Nodes
+#### Leader, Master and Follower Nodes
 
 |    Role    | Registration 
 |------------|--------------
@@ -85,11 +107,12 @@ Usage
 | `Master`   | `master.mesos.service.consul`
 | `Follower` | `follower.mesos.service.consul`
 
-##### Mesos Tasks
+#### Mesos Tasks
 
 Tasks are registered as `task_name.service.consul`
 
-### Todo
+## Todo
+
   * Add support for tags
   * Use task labels for metadata
   * Support for multiple port tasks
