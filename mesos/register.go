@@ -23,7 +23,7 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 		host := toIP(h)
 		port := toPort(p)
 
-		m.register(&consulapi.AgentServiceRegistration{
+		m.registerHost(&consulapi.AgentServiceRegistration{
 			ID:		fmt.Sprintf("%s:%s", f.Id, f.Hostname),
 			Name:		"mesos",
 			Port:		port,
@@ -60,10 +60,53 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 			},
 		}
 
-		err := m.Consul.Register(s)
-		if err != nil {
-			log.Print("[ERROR] ", err)
+		m.registerHost(s)
+	}
+}
+
+// helper function to compare service tag slices
+//
+func sliceEq(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a{
+		if a[i] != b[i] {
+			return false
 		}
+	}
+
+	return true
+}
+
+func (m *Mesos) registerHost(s *consulapi.AgentServiceRegistration) {
+
+	if _, ok := cache[s.ID]; ok {
+		log.Printf("[INFO] Host found. Comparing tags: (%v, %v)", cache[s.ID].service.Tags, s.Tags)
+
+		if sliceEq(s.Tags, cache[s.ID].service.Tags) {
+			cache[s.ID].isRegistered = true
+
+			// Tags are the same. Return
+			return
+		}
+
+		log.Println("[INFO] Tags changed. Re-registering")
+
+		// Delete cache entry. It will be re-created below
+		delete(cache, s.ID)
+	}
+
+	cache[s.ID] = &cacheEntry{
+		service:		s,
+		isRegistered:		true,
+	}
+
+
+	err := m.Consul.Register(s)
+	if err != nil {
+		log.Print("[ERROR] ", err)
 	}
 }
 
