@@ -111,8 +111,8 @@ func (m *Mesos) hostFromMasterInfo(mi *mesosproto.MasterInfo) MesosHost {
 			if err != nil {
 				ipstring = host
 			} else {
-				for i := range(ip) {
-					four = i.To4()
+				for _,i := range(ip) {
+					four := i.To4()
 					if four != nil {
 						ipstring = i.String()
 						break
