@@ -105,12 +105,6 @@ func (md *ClusterDetector) childrenChanged(zkc *Client, path string, obs Cluster
 	// topNode is the leader node
 	topNode := selectTopNode(list)
 
-if topNode == md.leaderNode {
-	fmt.Println("Ignoring children changed event")
-} else {
-	fmt.Println("Changing leader node")
-}
-
 	md.leaderNode = topNode
 
 	var clusterInfo = new(ClusterInfo)
@@ -148,7 +142,7 @@ if topNode == md.leaderNode {
 		}
 	}
 
-	log.Print("[INFO] detected cluster info: %+v",clusterInfo)
+	log.Printf("[INFO] detected cluster info: %+v",clusterInfo)
 	obs.OnClusterChanged(clusterInfo)
 }
 

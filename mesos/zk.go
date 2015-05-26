@@ -8,8 +8,6 @@ import (
 	"sync"
 	"time"
 
-	//"github.com/mesos/mesos-go/detector"
-	//_ "github.com/mesos/mesos-go/detector/zoo"
 	"github.com/mesos/mesos-go/mesosproto"
 
 	zoo "github.com/CiscoCloud/mesos-consul/mesos/zkdetect"
@@ -36,7 +34,6 @@ func (m *Mesos) zkDetector(zkURI string) {
 
 func (m *Mesos) leaderDetect(zkURI string) (<-chan struct{}, error) {
 	log.Print("[INFO] Starting leader detector for ZK ", zkURI)
-	//md, err := detector.New(zkURI)
 	md, err := zoo.NewClusterDetector(zkURI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create master detector: %v", err)
@@ -44,7 +41,6 @@ func (m *Mesos) leaderDetect(zkURI string) (<-chan struct{}, error) {
 
 	var startedOnce sync.Once
 	started := make(chan struct{})
-//	if err := md.Detect(detector.OnMasterChanged(func(info *mesosproto.MasterInfo) {
 	if err := md.Detect(zoo.OnClusterChanged(func(info *zoo.ClusterInfo) {
 		m.Lock.Lock()
 		defer m.Lock.Unlock()
@@ -115,7 +111,17 @@ func (m *Mesos) hostFromMasterInfo(mi *mesosproto.MasterInfo) MesosHost {
 			if err != nil {
 				ipstring = host
 			} else {
-				ipstring = ip[0].String()
+				for i := range(ip) {
+					four = i.To4()
+					if four != nil {
+						ipstring = i.String()
+						break
+					}
+				}
+				// If control reaches here there are no IPv4 addresses
+				// returned by net.LookupIP. Use the hostname as ipstring
+				//
+				ipstring = host
 			}
 		} else {
 			octets := make([]byte, 4, 4)
