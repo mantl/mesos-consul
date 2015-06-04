@@ -14,8 +14,11 @@ import (
 	flag "github.com/ogier/pflag"
 )
 
+const Name = "mesos-consul"
+const Version = "0.1.1"
+
 func Usage() {
-	fmt.Println("Usage: mesos-consul --zk=\"\" --registry=\"\" [options]\n")
+	fmt.Println("Usage: mesos-consul --zk=\"\" --registry=\"\" [options]")
 	fmt.Println("Options:")
 	fmt.Println("	--refresh=		Refresh time (default 1m)")
 	fmt.Println()
