@@ -1,4 +1,4 @@
-FROM gliderlabs/alpine
+FROM gliderlabs/alpine:3.1
 
 MAINTAINER Chris Aubuchon <Chris.Aubuchon@gmail.com>
 
