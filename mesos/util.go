@@ -48,7 +48,7 @@ func toIP(host string) string {
 func toPort(p string) int {
 	ps, err := strconv.Atoi(p)
 	if err != nil {
-		log.Printf("[ERROR] Invalid port number: %d", p)
+		log.Printf("[ERROR] Invalid port number: %s", p)
 	}
 
 	return ps
