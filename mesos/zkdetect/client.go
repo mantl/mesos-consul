@@ -328,7 +328,7 @@ watchLoop:
 						}
 						log.Printf("[INFO] watch invalidated, attempting to watch again: %v", e.Err)
 					} else {
-						log.Print("[WARN] received error while watching path %s: %s", watchPath, e.Err.Error())
+						log.Printf("[WARN] received error while watching path %s: %s", watchPath, e.Err.Error())
 					}
 				}
 			}

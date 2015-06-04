@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/golang/glog"
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/stretchr/testify/assert"
 )
@@ -80,12 +79,12 @@ func TestClusterDetectorChildrenChanged(t *testing.T) {
 		//and the second clearing it
 		switch called++; called {
 		case 1:
-			assert.NotNil(t, cluster.leader)
-			assert.Equal(t, cluster.leader.GetId(), "master@localhost:5050")
+			assert.NotNil(t, cluster.Leader)
+			assert.Equal(t, cluster.Leader.GetId(), "master@localhost:5050")
 			wCh <- struct{}{}
 		case 2:
-			assert.Equal(t, cluster.leader.GetId(), "master@localhost:5050")
-			//assert.Nil(t, cluster.leader)
+			assert.Equal(t, cluster.Leader.GetId(), "master@localhost:5050")
+			//assert.Nil(t, cluster.Leader)
 			wCh <- struct{}{}
 		case 3:
 			assert.Nil(t, cluster)
@@ -179,8 +178,8 @@ func TestClusterDetectFlappingConnectionState(t *testing.T) {
 			t.Fatalf("already detected master, was not expecting another change: %v", cluster)
 		} else {
 			detected = true
-			assert.NotNil(t, cluster.leader, fmt.Sprintf("on-master-changed %v", detected))
-			t.Logf("Leader change detected at %v: '%+v'", time.Now().Sub(startTime), cluster.leader)
+			assert.NotNil(t, cluster.Leader, fmt.Sprintf("on-master-changed %v", detected))
+			t.Logf("Leader change detected at %v: '%+v'", time.Now().Sub(startTime), cluster.Leader)
 			wg.Done()
 		}
 	}))
@@ -262,7 +261,7 @@ func TestClusterDetectFlappingConnector(t *testing.T) {
 			return
 		}
 		if (detected & 1) == 0 {
-			assert.NotNil(t, cluster.leader, fmt.Sprintf("on-master-changed-%d", detected))
+			assert.NotNil(t, cluster.Leader, fmt.Sprintf("on-master-changed-%d", detected))
 		} else {
 			assert.Nil(t, cluster, fmt.Sprintf("on-master-changed-%d", detected))
 		}
@@ -340,11 +339,11 @@ func TestClusterDetectMultiple(t *testing.T) {
 	detected := 0
 	md.Detect(OnClusterChanged(func(cluster *ClusterInfo) {
 		if detected == 3 {
-			assert.Nil(t, cluster.leader, fmt.Sprintf("on-master-changed-%d", detected))
+			assert.Nil(t, cluster.Leader, fmt.Sprintf("on-master-changed-%d", detected))
 		} else {
-			assert.NotNil(t, cluster.leader, fmt.Sprintf("on-master-changed-%d", detected))
+			assert.NotNil(t, cluster.Leader, fmt.Sprintf("on-master-changed-%d", detected))
 		}
-		t.Logf("Leader change detected at %v: '%+v'", time.Now().Sub(startTime), cluster.leader)
+		t.Logf("Leader change detected at %v: '%+v'", time.Now().Sub(startTime), cluster.Leader)
 		detected++
 		wg.Done()
 	}))

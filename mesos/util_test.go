@@ -15,7 +15,8 @@ func TestLeaderIP(t *testing.T) {
 func TestParsePID(t *testing.T) {
 	l := "slave(1)@127.0.0.1:5051"
 
-	host, port := parsePid(l)
+	host, port := parsePID(l)
 
 	t.Log("host: ", host)
+	t.Log("port: ", string(port))
 }

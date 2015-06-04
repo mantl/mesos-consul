@@ -95,7 +95,7 @@ func (md *ClusterDetector) Cancel() {
 //then we also probably want serial event delivery (aka. delivery via a chan) but then we
 //have to deal with chan buffer sizes .. ugh. This is probably the least painful for now.
 func (md *ClusterDetector) childrenChanged(zkc *Client, path string, obs ClusterChanged) {
-	log.Print("[INFO] fetching children at path '%v'", path)
+	log.Printf("[INFO] fetching children at path '%v'", path)
 	list, err := zkc.list(path)
 	if err != nil {
 		log.Print("[WARN] ", err)
@@ -119,20 +119,20 @@ func (md *ClusterDetector) childrenChanged(zkc *Client, path string, obs Cluster
 		seqStr := strings.TrimPrefix(v, nodePrefix)
 		_, err := strconv.ParseUint(seqStr, 10, 64)
 		if err != nil {
-			log.Print("[WARN] unexpected zk node format '%s': %v", seqStr, err)
+			log.Printf("[WARN] unexpected zk node format '%s': %v", seqStr, err)
 			continue
 		}
 
 		data, err := zkc.data(fmt.Sprintf("%s/%s", path, v))
 		if err != nil {
-			log.Print("[ERROR] unable to retrieve master data: %v", err.Error())
+			log.Printf("[ERROR] unable to retrieve master data: %v", err.Error())
 			return
 		}
 
 		masterInfo := new(mesos.MasterInfo)
 		err = proto.Unmarshal(data, masterInfo)
 		if err != nil {
-			log.Print("[ERROR] unable to unmarshall MasterInfo data from zookeeper: %v", err)
+			log.Printf("[ERROR] unable to unmarshall MasterInfo data from zookeeper: %v", err)
 		}
 
 		if v == md.leaderNode {
@@ -220,7 +220,7 @@ func selectTopNode(list []string) (node string) {
 		seqStr := strings.TrimPrefix(v, nodePrefix)
 		seq, err := strconv.ParseUint(seqStr, 10, 64)
 		if err != nil {
-			log.Print("[WARN] unexpected zk node format '%s': %v", seqStr, err)
+			log.Printf("[WARN] unexpected zk node format '%s': %v", seqStr, err)
 			continue
 		}
 		if seq < leaderSeq {
