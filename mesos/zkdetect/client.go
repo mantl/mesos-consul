@@ -250,8 +250,8 @@ func (zkc *Client) monitorSession(sessionEvents <-chan zk.Event, connected chan 
 					firstConnected = false
 				}
 
-			case zk.StateSyncConnected:
-				log.Print("[INFO] syncConnected to zookper server")
+			//case zk.StateSyncConnected:
+			//	log.Print("[INFO] syncConnected to zookper server")
 
 			case zk.StateDisconnected:
 				log.Print("[INFO] zookeeper client disconnected")

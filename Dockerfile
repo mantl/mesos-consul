@@ -1,14 +1,16 @@
-FROM gliderlabs/alpine:3.1
+FROM ubuntu:14.04
 
 MAINTAINER Chris Aubuchon <Chris.Aubuchon@gmail.com>
 
 COPY . /go/src/github.com/CiscoCloud/mesos-consul
-RUN apk add --update go git mercurial \
-	&& cd /go/src/github.com/CiscoCloud/mesos-consul \
+
+RUN apt-get update -y
+RUN apt-get install -y golang git mercurial
+RUN cd /go/src/github.com/CiscoCloud/mesos-consul \
 	&& export GOPATH=/go \
 	&& go get \
 	&& go build -o /bin/mesos-consul \
 	&& rm -rf /go \
-	&& apk del --purge go git mercurual
+	&& apt-get remove golang git
 
 ENTRYPOINT [ "/bin/mesos-consul" ]
