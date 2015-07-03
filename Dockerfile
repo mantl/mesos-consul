@@ -11,6 +11,6 @@ RUN cd /go/src/github.com/CiscoCloud/mesos-consul \
 	&& go get \
 	&& go build -o /bin/mesos-consul \
 	&& rm -rf /go \
-	&& apt-get remove golang git
+	&& apt-get remove -y golang git
 
 ENTRYPOINT [ "/bin/mesos-consul" ]
