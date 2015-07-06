@@ -38,7 +38,7 @@ func leaderIP(leader string) string {
 
 func toIP(host string) string {
 	// Check if host string is already an IP address
-	ip := new.ParseIP(host)
+	ip := net.ParseIP(host)
 	if ip != nil {
 		return host
 	}
