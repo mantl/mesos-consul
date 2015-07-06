@@ -9,6 +9,6 @@ RUN apk add --update go git mercurial \
 	&& go get \
 	&& go build -o /bin/mesos-consul \
 	&& rm -rf /go \
-	&& apk del --purge go git mercurual
+	&& apk del --purge go git mercurial
 
 ENTRYPOINT [ "/bin/mesos-consul" ]
