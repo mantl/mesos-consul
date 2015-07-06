@@ -77,7 +77,7 @@ func (m *Mesos) getLeader() (string, string) {
 
 	for _, ms := range *m.Masters {
 		if ms.isLeader {
-			return ms.host, ms.port
+			return toIP(ms.host), ms.port
 		}
 	}
 

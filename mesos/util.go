@@ -26,19 +26,27 @@ func parsePID(pid string) (string, string) {
 	host := strings.Split(strings.Split(pid, ":")[0], "@")[1]
 	port := strings.Split(pid, ":")[1]
 
-	return host, port
+	return toIP(host), port
 }
 	
 func leaderIP(leader string) string {
 	host := strings.Split(leader, "@")[1]
 	host = strings.Split(host, ":")[0]
 
-	return host
+	return toIP(host)
 }
 
 func toIP(host string) string {
+	// Check if host string is already an IP address
+	ip := new.ParseIP(host)
+	if ip != nil {
+		return host
+	}
+
+	// Try to resolve host
 	ip, err := net.LookupIP(host)
 	if err != nil {
+		// Return the hostname if unable to resolve
 		return host
 	}
 
