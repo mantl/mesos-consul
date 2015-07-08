@@ -19,25 +19,32 @@ func (m *Mesos) LoadCache() error {
 
 	host, _ := m.getLeader()
 	
-	client := m.Consul.Client(host).Agent()
+	client := m.Consul.Client(host).Catalog()
 
-	services, err := client.Services()
+	serviceList, _, err := client.Services(nil)
 	if err != nil {
 		return err
 	}
 
-	for _, s := range services {
-		if strings.HasPrefix(s.ID, "mesos-consul:") {
-			log.Printf("[DEBUG] Found '%s' with ID '%s'", s.Service, s.ID)
-			m.ServiceCache[s.ID] = &CacheEntry{
-				service:	&consulapi.AgentServiceRegistration{
-						ID:		s.ID,
-						Name:		s.Service,
-						Port:		s.Port,
-						Address:	s.Address,
-						Tags:		s.Tags,
-						},
-				isRegistered:	false,
+	for service, _ := range serviceList {
+		catalogServices, _, err := client.Service(service, "", nil)
+		if err != nil {
+			return err
+		}
+
+		for _, s := range catalogServices {
+			if strings.HasPrefix(s.ServiceID, "mesos-consul:")  {
+				log.Printf("[DEBUG] Found '%s' with ID '%s'", s.ServiceName, s.ServiceID)
+				m.ServiceCache[s.ServiceID] = &CacheEntry{
+					service:	&consulapi.AgentServiceRegistration{
+							ID:		s.ServiceID,
+							Name:		s.ServiceName,
+							Port:		s.ServicePort,
+							Address:	s.ServiceAddress,
+							Tags:		s.ServiceTags,
+							},
+					isRegistered:	false,
+				}
 			}
 		}
 	}
