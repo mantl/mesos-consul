@@ -17,10 +17,16 @@ import (
 	consulapi "github.com/hashicorp/consul/api"
 )
 
+type CacheEntry struct {
+	service		*consulapi.AgentServiceRegistration
+	isRegistered	bool
+}
+
 type Mesos struct {
 	Consul		*consul.Consul
 	Masters		*[]MesosHost
 	Lock		sync.Mutex
+	ServiceCache	map[string]*CacheEntry
 }
 
 func New(c *config.Config, consul *consul.Consul) *Mesos{
@@ -46,6 +52,10 @@ func (m *Mesos) Refresh() error {
 	
 	if (sj.Leader == "") {
 		return errors.New("Empty master")
+	}
+
+	if m.ServiceCache == nil {
+		m.LoadCache()
 	}
 
 	m.parseState(sj)
@@ -121,7 +131,7 @@ func (m *Mesos) parseState(sj StateJSON) {
 				if task.Resources.Ports != "" {
 					for _, port := range yankPorts(task.Resources.Ports) {
 						m.register(&consulapi.AgentServiceRegistration{
-							ID:	fmt.Sprintf("%s:%s:%d",host,tname,port),
+							ID:	fmt.Sprintf("mesos-consul:%s:%s:%d",host,tname,port),
 							Name:	tname,
 							Port:	port,
 							Address: toIP(host),

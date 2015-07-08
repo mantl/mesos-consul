@@ -3,16 +3,44 @@ package mesos
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	consulapi "github.com/hashicorp/consul/api"
 )
 
-type cacheEntry struct {
-	service		*consulapi.AgentServiceRegistration
-	isRegistered	bool
-}
+// Query the consul agent on the Mesos Master
+// to initialize the cache.
+//
+// All services created by mesos-consul are prefixed
+// with `mesos-consul:`
+//
+func (m *Mesos) LoadCache() error {
+	host, _ := m.getLeader()
+	
+	client := m.Consul.Client(host).Agent()
 
-var cache = make(map[string]*cacheEntry)
+	services, err := client.Services()
+	if err != nil {
+		return err
+	}
+
+	for _, s := range services {
+		if strings.HasPrefix(s.ID, "mesos-consul:") {
+			m.ServiceCache[s.ID] = &CacheEntry{
+				service:	&consulapi.AgentServiceRegistration{
+							ID:		s.ID,
+						Name:		s.Service,
+						Port:		s.Port,
+						Address:	s.Address,
+						Tags:		s.Tags,
+						},
+				isRegistered:	false,
+			}
+		}
+	}
+
+	return nil
+}
 
 func (m *Mesos) RegisterHosts(sj StateJSON) {
 	log.Print("[INFO] Running RegisterHosts")
@@ -24,7 +52,7 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 		port := toPort(p)
 
 		m.registerHost(&consulapi.AgentServiceRegistration{
-			ID:		fmt.Sprintf("%s:%s", f.Id, f.Hostname),
+			ID:		fmt.Sprintf("mesos-consul:%s:%s", f.Id, f.Hostname),
 			Name:		"mesos",
 			Port:		port,
 			Address:	host,
@@ -49,7 +77,7 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 		host := toIP(ma.host)
 		port := toPort(ma.port)
 		s := &consulapi.AgentServiceRegistration{
-			ID:		fmt.Sprintf("mesos:%s:%s", ma.host, ma.port),
+			ID:		fmt.Sprintf("mesos-consul:%s:%s", ma.host, ma.port),
 			Name:		"mesos",
 			Port:		port,
 			Address:	host,
@@ -82,11 +110,11 @@ func sliceEq(a, b []string) bool {
 
 func (m *Mesos) registerHost(s *consulapi.AgentServiceRegistration) {
 
-	if _, ok := cache[s.ID]; ok {
-		log.Printf("[INFO] Host found. Comparing tags: (%v, %v)", cache[s.ID].service.Tags, s.Tags)
+	if _, ok := m.ServiceCache[s.ID]; ok {
+		log.Printf("[INFO] Host found. Comparing tags: (%v, %v)", m.ServiceCache[s.ID].service.Tags, s.Tags)
 
-		if sliceEq(s.Tags, cache[s.ID].service.Tags) {
-			cache[s.ID].isRegistered = true
+		if sliceEq(s.Tags, m.ServiceCache[s.ID].service.Tags) {
+			m.ServiceCache[s.ID].isRegistered = true
 
 			// Tags are the same. Return
 			return
@@ -95,10 +123,10 @@ func (m *Mesos) registerHost(s *consulapi.AgentServiceRegistration) {
 		log.Println("[INFO] Tags changed. Re-registering")
 
 		// Delete cache entry. It will be re-created below
-		delete(cache, s.ID)
+		delete(m.ServiceCache, s.ID)
 	}
 
-	cache[s.ID] = &cacheEntry{
+	m.ServiceCache[s.ID] = &CacheEntry{
 		service:		s,
 		isRegistered:		true,
 	}
@@ -111,15 +139,15 @@ func (m *Mesos) registerHost(s *consulapi.AgentServiceRegistration) {
 }
 
 func (m *Mesos) register(s *consulapi.AgentServiceRegistration) {
-	if _, ok := cache[s.ID]; ok {
+	if _, ok := m.ServiceCache[s.ID]; ok {
 		log.Printf("[INFO] Service found. Not registering: %s", s.ID)
-		cache[s.ID].isRegistered = true
+		m.ServiceCache[s.ID].isRegistered = true
 		return
 	}
 
 	log.Print("[INFO] Registering ", s.ID)
 
-	cache[s.ID] = &cacheEntry{
+	m.ServiceCache[s.ID] = &CacheEntry{
 		service:		s,
 		isRegistered:		true,
 	}
@@ -133,14 +161,14 @@ func (m *Mesos) register(s *consulapi.AgentServiceRegistration) {
 // deregister items that have gone away
 //
 func (m *Mesos) deregister() {
-	for s, b := range cache {
+	for s, b := range m.ServiceCache {
 		if !b.isRegistered {
 			log.Print("[INFO] Deregistering ", s)
 			m.Consul.Deregister(b.service)
 
-			delete(cache, s)
+			delete(m.ServiceCache, s)
 		} else {
-			cache[s].isRegistered = false
+			m.ServiceCache[s].isRegistered = false
 		}
 	}
 }

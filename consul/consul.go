@@ -23,6 +23,24 @@ func NewConsul(c *config.Config) *Consul {
 	}
 }
 
+// Client()
+//   Return a consul client at the specified address
+func (c *Consul) Client(address string) *consulapi.Client {
+	if address == "" {
+		log.Print("[WARN] No address to Consul.Agent")
+		return nil
+	}
+
+        if _, ok := c.agents[address]; !ok {
+                // Agent connection not saved. Connect.
+                c.agents[address] = c.newAgent(address)
+        }
+
+        return c.agents[address]
+}
+
+	
+
 // newAgent()
 //   Connect to a new agent specified by address
 //
@@ -81,7 +99,7 @@ func (r *Consul) Register(service *consulapi.AgentServiceRegistration) error {
 
 func (r *Consul) Deregister(service *consulapi.AgentServiceRegistration) error {
 	if _, ok := r.agents[service.Address]; !ok {
-		log.Print("[WARN] Deregistering a service  without an agent connection?!")
+		log.Print("[WARN] Deregistering a service without an agent connection?!")
 
 		// Agent connection not saved. Connect.
 		r.agents[service.Address] = r.newAgent(service.Address)
