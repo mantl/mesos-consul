@@ -46,7 +46,7 @@ func (c *Consul) Client(address string) *consulapi.Client {
 //
 func (c *Consul) newAgent(address string) *consulapi.Client {
 	if address == "" {
-		log.Printf("No address to Consul.NewAgent")
+		log.Printf("[WARN] No address to Consul.NewAgent")
 		return nil
 	}
 
@@ -55,17 +55,17 @@ func (c *Consul) newAgent(address string) *consulapi.Client {
 	config.Address = fmt.Sprintf("%s:%s", address, c.config.RegistryPort)
 
 	if c.config.RegistryToken != "" {
-		log.Printf("setting token to %s", c.config.RegistryToken)
+		log.Printf("[DEBUG] setting token to %s", c.config.RegistryToken)
 		config.Token = c.config.RegistryToken
 	}
 
 	if c.config.RegistrySSL.Enabled {
-		log.Printf("enabling SSL")
+		log.Printf("[DEBUG] enabling SSL")
 		config.Scheme = "https"
 	}
 
 	if !c.config.RegistrySSL.Verify {
-		log.Printf("disabled SSL verification")
+		log.Printf("[DEBUG] disabled SSL verification")
 		config.HttpClient.Transport = &http.Transport {
 			TLSClientConfig: &tls.Config {
 				InsecureSkipVerify: true,
@@ -74,7 +74,7 @@ func (c *Consul) newAgent(address string) *consulapi.Client {
 	}
 
 	if c.config.RegistryAuth.Enabled {
-		log.Printf("setting basic auth")
+		log.Printf("[DEBUG] setting basic auth")
 		config.HttpAuth = &consulapi.HttpBasicAuth{
 			Username: c.config.RegistryAuth.Username,
 			Password: c.config.RegistryAuth.Password,

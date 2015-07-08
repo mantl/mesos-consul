@@ -15,6 +15,8 @@ import (
 // with `mesos-consul:`
 //
 func (m *Mesos) LoadCache() error {
+	log.Print("[DEBUG] Populating cache from Consul")
+
 	host, _ := m.getLeader()
 	
 	client := m.Consul.Client(host).Agent()
@@ -26,9 +28,10 @@ func (m *Mesos) LoadCache() error {
 
 	for _, s := range services {
 		if strings.HasPrefix(s.ID, "mesos-consul:") {
+			log.Printf("[DEBUG] Found '%s' with ID '%s'", s.Service, s.ID)
 			m.ServiceCache[s.ID] = &CacheEntry{
 				service:	&consulapi.AgentServiceRegistration{
-							ID:		s.ID,
+						ID:		s.ID,
 						Name:		s.Service,
 						Port:		s.Port,
 						Address:	s.Address,
