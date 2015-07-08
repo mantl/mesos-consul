@@ -15,14 +15,7 @@ import (
 )
 
 const Name = "mesos-consul"
-const Version = "0.1.1"
-
-func Usage() {
-	fmt.Println("Usage: mesos-consul --zk=\"\" --registry=\"\" [options]")
-	fmt.Println("Options:")
-	fmt.Println("	--refresh=		Refresh time (default 1m)")
-	fmt.Println()
-}
+const Version = "0.2"
 
 func main() {
 	c, err := parseFlags(os.Args[1:])
