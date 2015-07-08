@@ -55,6 +55,7 @@ func (m *Mesos) Refresh() error {
 	}
 
 	if m.ServiceCache == nil {
+		m.ServiceCache = make(map[string]*CacheEntry)
 		m.LoadCache()
 	}
 
