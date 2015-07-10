@@ -60,7 +60,7 @@ Where `mesos-consul.json` is similar to (replacing the image with your image):
 ```
 {
   "args": [
-    "--zk=zk://zookeeper.service.consul:2181/mesos",
+    "--zk=zk://zookeeper.service.consul:2181/mesos"
   ],  
   "container": {
     "type": "DOCKER",
