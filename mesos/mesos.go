@@ -18,18 +18,18 @@ import (
 )
 
 type CacheEntry struct {
-	service		*consulapi.AgentServiceRegistration
-	isRegistered	bool
+	service      *consulapi.AgentServiceRegistration
+	isRegistered bool
 }
 
 type Mesos struct {
-	Consul		*consul.Consul
-	Masters		*[]MesosHost
-	Lock		sync.Mutex
-	ServiceCache	map[string]*CacheEntry
+	Consul       *consul.Consul
+	Masters      *[]MesosHost
+	Lock         sync.Mutex
+	ServiceCache map[string]*CacheEntry
 }
 
-func New(c *config.Config, consul *consul.Consul) *Mesos{
+func New(c *config.Config, consul *consul.Consul) *Mesos {
 	m := new(Mesos)
 
 	if c.Zk == "" {
@@ -49,8 +49,8 @@ func (m *Mesos) Refresh() error {
 		log.Print("[ERROR] No master")
 		return err
 	}
-	
-	if (sj.Leader == "") {
+
+	if sj.Leader == "" {
 		return errors.New("Empty master")
 	}
 
@@ -133,12 +133,18 @@ func (m *Mesos) parseState(sj StateJSON) {
 				if task.Resources.Ports != "" {
 					for _, port := range yankPorts(task.Resources.Ports) {
 						m.register(&consulapi.AgentServiceRegistration{
-							ID:	fmt.Sprintf("mesos-consul:%s:%s:%d",host,tname,port),
-							Name:	tname,
-							Port:	port,
+							ID:      fmt.Sprintf("mesos-consul:%s:%s:%d", host, tname, port),
+							Name:    tname,
+							Port:    port,
 							Address: toIP(host),
-							})
+						})
 					}
+				} else {
+					m.register(&consulapi.AgentServiceRegistration{
+						ID:      fmt.Sprintf("mesos-consul:%s-%s", host, tname),
+						Name:    tname,
+						Address: toIP(host),
+					})
 				}
 			}
 		}
@@ -155,7 +161,7 @@ func yankPorts(ports string) []int {
 	yports := []int{}
 
 	mports := strings.Split(lhs, ",")
-	for _,mport := range mports {
+	for _, mport := range mports {
 		pz := strings.Split(strings.TrimSpace(mport), "-")
 		lo, _ := strconv.Atoi(pz[0])
 		hi, _ := strconv.Atoi(pz[1])
