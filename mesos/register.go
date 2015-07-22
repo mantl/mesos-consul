@@ -62,7 +62,7 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 		port := toPort(p)
 
 		m.registerHost(&consulapi.AgentServiceRegistration{
-			ID:		fmt.Sprintf("mesos-consul:%s:%s", f.Id, f.Hostname),
+			ID:		fmt.Sprintf("mesos-consul:mesos:%s:%s", f.Id, f.Hostname),
 			Name:		"mesos",
 			Port:		port,
 			Address:	host,
@@ -87,7 +87,7 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 		host := toIP(ma.host)
 		port := toPort(ma.port)
 		s := &consulapi.AgentServiceRegistration{
-			ID:		fmt.Sprintf("mesos-consul:%s:%s", ma.host, ma.port),
+			ID:		fmt.Sprintf("mesos-consul:mesos:%s:%s", ma.host, ma.port),
 			Name:		"mesos",
 			Port:		port,
 			Address:	host,
