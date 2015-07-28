@@ -9,13 +9,13 @@ import (
 )
 
 func cleanName(name string) string {
-	reg, err := regexp.Compile("[^\\w-.\\.]")
+	reg, err := regexp.Compile("[^\\w-]")
 	if err != nil {
 		log.Print("[WARN] ", err)
 		return name
 	}
 
-	s := reg.ReplaceAllString(name, "")
+	s := reg.ReplaceAllString(name, "-")
 
 	return strings.ToLower(strings.Replace(s, "_", "", -1))
 }
@@ -28,7 +28,7 @@ func parsePID(pid string) (string, string) {
 
 	return toIP(host), port
 }
-	
+
 func leaderIP(leader string) string {
 	host := strings.Split(leader, "@")[1]
 	host = strings.Split(host, ":")[0]
