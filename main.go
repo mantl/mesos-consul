@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/CiscoCloud/mesos-consul/config"
@@ -25,7 +26,7 @@ func main() {
 
 	log.Print("[INFO] Using registry port: ", c.RegistryPort)
 	log.Print("[INFO] Using zookeeper: ", c.Zk)
-	leader := mesos.New(c, consul.NewConsul(c))
+	leader := mesos.New(c)
 
 	ticker := time.NewTicker(c.Refresh)
         leader.Refresh()
@@ -40,7 +41,7 @@ func parseFlags(args []string) (*config.Config, error) {
 
 	flags := flag.NewFlagSet("mesos-consul", flag.ContinueOnError)
 	flags.Usage = func() {
-		fmt.Print(usage)
+		fmt.Println(Help())
 	}
 
 	flags.BoolVar(&doHelp,			"help", false, "")
@@ -54,6 +55,8 @@ func parseFlags(args []string) (*config.Config, error) {
 	flags.StringVar(&c.RegistrySSL.CaCert,	"registry-ssl-cacert", c.RegistrySSL.CaCert, "")
 	flags.StringVar(&c.RegistryToken,		"registry-token", c.RegistryToken, "")
 	flags.StringVar(&c.Zk,			"zk", "zk://127.0.0.1:2181/mesos", "")
+
+	consul.AddCmdFlags(flags)
 
 	if err := flags.Parse(args); err != nil {
 		return nil, err
@@ -78,7 +81,8 @@ func parseFlags(args []string) (*config.Config, error) {
 	return c, nil
 }
 
-const usage = `
+func Help() string {
+	helpText := `
 Usage: mesos-consul [options]
 
 Options:
@@ -99,4 +103,7 @@ Options:
   --registry-token=<token>	Set registry ACL token
   --zk=<address>		Zookeeper path to Mesos
 				(default zk://127.0.0.1:2181/mesos)
-`
+` + consul.Help()
+
+	return strings.TrimSpace(helpText)
+}

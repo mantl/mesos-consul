@@ -3,9 +3,8 @@ package mesos
 import (
 	"fmt"
 	"log"
-	"strings"
 
-	consulapi "github.com/hashicorp/consul/api"
+	"github.com/CiscoCloud/mesos-consul/registry"
 )
 
 // Query the consul agent on the Mesos Master
@@ -19,37 +18,7 @@ func (m *Mesos) LoadCache() error {
 
 	host, _ := m.getLeader()
 	
-	client := m.Consul.Client(host).Catalog()
-
-	serviceList, _, err := client.Services(nil)
-	if err != nil {
-		return err
-	}
-
-	for service, _ := range serviceList {
-		catalogServices, _, err := client.Service(service, "", nil)
-		if err != nil {
-			return err
-		}
-
-		for _, s := range catalogServices {
-			if strings.HasPrefix(s.ServiceID, "mesos-consul:")  {
-				log.Printf("[DEBUG] Found '%s' with ID '%s'", s.ServiceName, s.ServiceID)
-				m.ServiceCache[s.ServiceID] = &CacheEntry{
-					service:	&consulapi.AgentServiceRegistration{
-							ID:		s.ServiceID,
-							Name:		s.ServiceName,
-							Port:		s.ServicePort,
-							Address:	s.ServiceAddress,
-							Tags:		s.ServiceTags,
-							},
-					isRegistered:	false,
-				}
-			}
-		}
-	}
-
-	return nil
+	return m.Registry.CacheLoad(host)
 }
 
 func (m *Mesos) RegisterHosts(sj StateJSON) {
@@ -61,13 +30,13 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 		host := toIP(h)
 		port := toPort(p)
 
-		m.registerHost(&consulapi.AgentServiceRegistration{
+		m.registerHost(&registry.Service{
 			ID:		fmt.Sprintf("mesos-consul:mesos:%s:%s", f.Id, f.Hostname),
 			Name:		"mesos",
 			Port:		port,
 			Address:	host,
 			Tags:		[]string{ "follower" },
-			Check:		&consulapi.AgentServiceCheck{
+			Check:		&registry.Check{
 				HTTP:		fmt.Sprintf("http://%s:%d/slave(1)/health", host, port),
 				Interval:	"10s",
 			},
@@ -86,13 +55,13 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 		}
 		host := toIP(ma.host)
 		port := toPort(ma.port)
-		s := &consulapi.AgentServiceRegistration{
+		s := &registry.Service{
 			ID:		fmt.Sprintf("mesos-consul:mesos:%s:%s", ma.host, ma.port),
 			Name:		"mesos",
 			Port:		port,
 			Address:	host,
 			Tags:		tags,
-			Check:		&consulapi.AgentServiceCheck{
+			Check:		&registry.Check{
 				HTTP:		fmt.Sprintf("http://%s:%d/master/health", host, port),
 				Interval:	"10s",
 			},
@@ -118,13 +87,13 @@ func sliceEq(a, b []string) bool {
 	return true
 }
 
-func (m *Mesos) registerHost(s *consulapi.AgentServiceRegistration) {
+func (m *Mesos) registerHost(s *registry.Service) {
+	h := m.Registry.CacheLookup(s.ID)
+	if h != nil {
+		log.Printf("[INFO] Host found. Comparing tags: (%v, %v)", h.Tags, s.Tags)
 
-	if _, ok := m.ServiceCache[s.ID]; ok {
-		log.Printf("[INFO] Host found. Comparing tags: (%v, %v)", m.ServiceCache[s.ID].service.Tags, s.Tags)
-
-		if sliceEq(s.Tags, m.ServiceCache[s.ID].service.Tags) {
-			m.ServiceCache[s.ID].isRegistered = true
+		if sliceEq(s.Tags, h.Tags) {
+			m.Registry.CacheMark(s.ID)
 
 			// Tags are the same. Return
 			return
@@ -133,52 +102,11 @@ func (m *Mesos) registerHost(s *consulapi.AgentServiceRegistration) {
 		log.Println("[INFO] Tags changed. Re-registering")
 
 		// Delete cache entry. It will be re-created below
-		delete(m.ServiceCache, s.ID)
+		m.Registry.CacheDelete(s.ID)
 	}
 
-	m.ServiceCache[s.ID] = &CacheEntry{
-		service:		s,
-		isRegistered:		true,
-	}
-
-
-	err := m.Consul.Register(s)
+	err := m.Registry.Register(s)
 	if err != nil {
 		log.Print("[ERROR] ", err)
-	}
-}
-
-func (m *Mesos) register(s *consulapi.AgentServiceRegistration) {
-	if _, ok := m.ServiceCache[s.ID]; ok {
-		log.Printf("[INFO] Service found. Not registering: %s", s.ID)
-		m.ServiceCache[s.ID].isRegistered = true
-		return
-	}
-
-	log.Print("[INFO] Registering ", s.ID)
-
-	m.ServiceCache[s.ID] = &CacheEntry{
-		service:		s,
-		isRegistered:		true,
-	}
-
-	err := m.Consul.Register(s)
-	if err != nil {
-		log.Print("[ERROR] ", err)
-	}
-}
-
-// deregister items that have gone away
-//
-func (m *Mesos) deregister() {
-	for s, b := range m.ServiceCache {
-		if !b.isRegistered {
-			log.Print("[INFO] Deregistering ", s)
-			m.Consul.Deregister(b.service)
-
-			delete(m.ServiceCache, s)
-		} else {
-			m.ServiceCache[s].isRegistered = false
-		}
 	}
 }

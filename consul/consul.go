@@ -6,26 +6,27 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/CiscoCloud/mesos-consul/config"
+	"github.com/CiscoCloud/mesos-consul/registry"
+
 	consulapi "github.com/hashicorp/consul/api"
 )
 
 type Consul struct {
 	agents		map[string]*consulapi.Client
-	config		*config.Config
+	config		consulConfig
 }
 
 //
-func NewConsul(c *config.Config) *Consul {
+func New() *Consul {
 	return &Consul{
 		agents:		make(map[string]*consulapi.Client),
-		config:		c,
+		config:		config,
 	}
 }
 
-// Client()
+// client()
 //   Return a consul client at the specified address
-func (c *Consul) Client(address string) *consulapi.Client {
+func (c *Consul) client(address string) *consulapi.Client {
 	if address == "" {
 		log.Print("[WARN] No address to Consul.Agent")
 		return nil
@@ -52,19 +53,19 @@ func (c *Consul) newAgent(address string) *consulapi.Client {
 
 	config := consulapi.DefaultConfig()
 
-	config.Address = fmt.Sprintf("%s:%s", address, c.config.RegistryPort)
+	config.Address = fmt.Sprintf("%s:%s", address, c.config.port)
 
-	if c.config.RegistryToken != "" {
-		log.Printf("[DEBUG] setting token to %s", c.config.RegistryToken)
-		config.Token = c.config.RegistryToken
+	if c.config.token != "" {
+		log.Printf("[DEBUG] setting token to %s", c.config.token)
+		config.Token = c.config.token
 	}
 
-	if c.config.RegistrySSL.Enabled {
+	if c.config.sslEnabled {
 		log.Printf("[DEBUG] enabling SSL")
 		config.Scheme = "https"
 	}
 
-	if !c.config.RegistrySSL.Verify {
+	if !c.config.sslVerify {
 		log.Printf("[DEBUG] disabled SSL verification")
 		config.HttpClient.Transport = &http.Transport {
 			TLSClientConfig: &tls.Config {
@@ -73,11 +74,11 @@ func (c *Consul) newAgent(address string) *consulapi.Client {
 		}
 	}
 
-	if c.config.RegistryAuth.Enabled {
+	if c.config.auth.Enabled {
 		log.Printf("[DEBUG] setting basic auth")
 		config.HttpAuth = &consulapi.HttpBasicAuth{
-			Username: c.config.RegistryAuth.Username,
-			Password: c.config.RegistryAuth.Password,
+			Username: c.config.auth.Username,
+			Password: c.config.auth.Password,
 		}
 	}
 
@@ -88,22 +89,69 @@ func (c *Consul) newAgent(address string) *consulapi.Client {
 	return client
 }
 
-func (r *Consul) Register(service *consulapi.AgentServiceRegistration) error {
-	if _, ok := r.agents[service.Address]; !ok {
-		// Agent connection not saved. Connect.
-		r.agents[service.Address] = r.newAgent(service.Address)
+func (c *Consul) Register(service *registry.Service) error {
+	if _, ok := serviceCache[service.ID]; ok {
+		log.Printf("[DEBUG] Service found. Not registering: %s", service.ID)
+		serviceCache[service.ID].isRegistered = true
+		return nil
 	}
 
-	return r.agents[service.Address].Agent().ServiceRegister(service)
+	if _, ok := c.agents[service.Address]; !ok {
+		// Agent connection not saved. Connect.
+		c.agents[service.Address] = c.newAgent(service.Address)
+	}
+
+	log.Print("[INFO] Registering ", service.ID)
+
+	s := &consulapi.AgentServiceRegistration{
+		ID:		service.ID,
+		Name:		service.Name,
+		Port:		service.Port,
+		Address:	service.Address,
+		Tags:		service.Tags,
+		Check:		&consulapi.AgentServiceCheck{
+			TTL:		service.Check.TTL,
+			Script:		service.Check.Script,
+			HTTP:		service.Check.HTTP,
+			Interval:	service.Check.Interval,
+		},
+	}
+
+	serviceCache[s.ID] = &cacheEntry{
+		service:	s,
+		isRegistered:	true,
+	}
+
+	return c.agents[service.Address].Agent().ServiceRegister(s)
 }
 
-func (r *Consul) Deregister(service *consulapi.AgentServiceRegistration) error {
-	if _, ok := r.agents[service.Address]; !ok {
+// Deregister()
+//   Deregister services that no longer exist
+//
+func (c *Consul) Deregister() error {
+	for s, b := range serviceCache {
+		if !b.isRegistered {
+			log.Printf("[INFO] Deregistering %s", s)
+			err := c.deregister(b.service)
+			if err != nil {
+				return err
+			}
+			delete(serviceCache, s)
+		} else {
+			serviceCache[s].isRegistered = true
+		}
+	}
+
+	return nil
+}
+
+func (c *Consul) deregister(service *consulapi.AgentServiceRegistration) error {
+	if _, ok := c.agents[service.Address]; !ok {
 		log.Print("[WARN] Deregistering a service without an agent connection?!")
 
 		// Agent connection not saved. Connect.
-		r.agents[service.Address] = r.newAgent(service.Address)
+		c.agents[service.Address] = c.newAgent(service.Address)
 	}
 
-	return r.agents[service.Address].Agent().ServiceDeregister(service.ID)
+	return c.agents[service.Address].Agent().ServiceDeregister(service.ID)
 }

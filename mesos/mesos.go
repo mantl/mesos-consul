@@ -13,6 +13,7 @@ import (
 
 	"github.com/CiscoCloud/mesos-consul/config"
 	"github.com/CiscoCloud/mesos-consul/consul"
+	"github.com/CiscoCloud/mesos-consul/registry"
 
 	consulapi "github.com/hashicorp/consul/api"
 )
@@ -23,20 +24,26 @@ type CacheEntry struct {
 }
 
 type Mesos struct {
-	Consul		*consul.Consul
+	Registry	registry.Registry
 	Masters		*[]MesosHost
 	Lock		sync.Mutex
 	ServiceCache	map[string]*CacheEntry
 }
 
-func New(c *config.Config, consul *consul.Consul) *Mesos{
+func New(c *config.Config) *Mesos{
 	m := new(Mesos)
 
 	if c.Zk == "" {
 		return nil
 	}
 
-	m.Consul = consul
+	if consul.IsEnabled() {
+		m.Registry = consul.New()
+	}
+
+	if m.Registry == nil {
+		log.Fatal("[ERROR] No registry specified")
+	}
 
 	m.zkDetector(c.Zk)
 
@@ -132,11 +139,17 @@ func (m *Mesos) parseState(sj StateJSON) {
 				tname := cleanName(task.Name)
 				if task.Resources.Ports != "" {
 					for _, port := range yankPorts(task.Resources.Ports) {
-						m.register(&consulapi.AgentServiceRegistration{
-							ID:	fmt.Sprintf("mesos-consul:%s:%s:%d",host,tname,port),
-							Name:	tname,
-							Port:	port,
-							Address: toIP(host),
+						m.Registry.Register(&registry.Service{
+							ID:		fmt.Sprintf("mesos-consul:%s:%s:%d",host,tname,port),
+							Name:		tname,
+							Port:		port,
+							Address:	toIP(host),
+							Check:		&registry.Check{
+								TTL:	"",
+								Script: "",
+								HTTP: "",
+								Interval: "",
+							},
 							})
 					}
 				}
@@ -145,7 +158,7 @@ func (m *Mesos) parseState(sj StateJSON) {
 	}
 
 	// Remove completed tasks
-	m.deregister()
+	m.Registry.Deregister()
 }
 
 func yankPorts(ports string) []int {
