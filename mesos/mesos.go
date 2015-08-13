@@ -27,7 +27,6 @@ type Mesos struct {
 	Registry	registry.Registry
 	Masters		*[]MesosHost
 	Lock		sync.Mutex
-	ServiceCache	map[string]*CacheEntry
 }
 
 func New(c *config.Config) *Mesos{
@@ -45,6 +44,8 @@ func New(c *config.Config) *Mesos{
 		log.Fatal("[ERROR] No registry specified")
 	}
 
+	m.Registry.CacheCreate()
+
 	m.zkDetector(c.Zk)
 
 	return m
@@ -61,11 +62,6 @@ func (m *Mesos) Refresh() error {
 		return errors.New("Empty master")
 	}
 
-	if m.ServiceCache == nil {
-		log.Print("[INFO] Creating ServiceCache")
-		m.ServiceCache = make(map[string]*CacheEntry)
-		m.LoadCache()
-	}
 
 	m.parseState(sj)
 

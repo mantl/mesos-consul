@@ -17,6 +17,14 @@ type cacheEntry struct {
 // Service cache
 var serviceCache map[string]*cacheEntry
 
+// CacheCreate()
+//
+func (c *Consul) CacheCreate() {
+	if serviceCache == nil {
+		serviceCache = make(map[string]*cacheEntry)
+	}
+}
+
 // Initialize the service cache
 //
 func (c *Consul) CacheLoad(host string) error {

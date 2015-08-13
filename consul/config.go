@@ -39,7 +39,7 @@ Consul Options:
   --consul			Use Consul backend
   --consul-port			Consul agent API port
 				(default: 8500)
-  --consul-auth			The basic authentication username (and optionsl password),
+  --consul-auth			The basic authentication username (and optional password),
 				separated by a colon.
 				(default: not set)
   --consul-ssl			Use HTTPS when talking to Consul
