@@ -54,7 +54,7 @@ func (t *Task) GetCheck(cv *CheckVar) *registry.Check {
 // Replace {variables} with values
 //
 func interpolate(cv *CheckVar, s string) string {
-	r := regexp.MustCompile("{[^}]}")
+	r := regexp.MustCompile("{[^}]*}")
 
 	globalCV = cv
 	rval := r.ReplaceAllStringFunc(s, varReplace)
