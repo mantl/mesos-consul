@@ -136,7 +136,7 @@ func (c *Consul) Deregister() error {
 			}
 			delete(serviceCache, s)
 		} else {
-			serviceCache[s].isRegistered = true
+			serviceCache[s].isRegistered = false
 		}
 	}
 
