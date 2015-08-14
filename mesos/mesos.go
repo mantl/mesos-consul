@@ -3,7 +3,6 @@ package mesos
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -19,17 +18,17 @@ import (
 )
 
 type CacheEntry struct {
-	service		*consulapi.AgentServiceRegistration
-	isRegistered	bool
+	service      *consulapi.AgentServiceRegistration
+	isRegistered bool
 }
 
 type Mesos struct {
-	Registry	registry.Registry
-	Masters		*[]MesosHost
-	Lock		sync.Mutex
+	Registry registry.Registry
+	Masters  *[]MesosHost
+	Lock     sync.Mutex
 }
 
-func New(c *config.Config) *Mesos{
+func New(c *config.Config) *Mesos {
 	m := new(Mesos)
 
 	if c.Zk == "" {
@@ -57,11 +56,10 @@ func (m *Mesos) Refresh() error {
 		log.Print("[ERROR] No master")
 		return err
 	}
-	
-	if (sj.Leader == "") {
+
+	if sj.Leader == "" {
 		return errors.New("Empty master")
 	}
-
 
 	m.parseState(sj)
 
@@ -130,25 +128,10 @@ func (m *Mesos) parseState(sj StateJSON) {
 
 	for _, fw := range sj.Frameworks {
 		for _, task := range fw.Tasks {
-			host, err := sj.Followers.hostById(task.FollowerId)
+			host, err := sj.GetFollowerById(task.FollowerId)
 			if err == nil && task.State == "TASK_RUNNING" {
-				tname := cleanName(task.Name)
-				if task.Resources.Ports != "" {
-					for _, port := range yankPorts(task.Resources.Ports) {
-						m.Registry.Register(&registry.Service{
-							ID:		fmt.Sprintf("mesos-consul:%s:%s:%d",host,tname,port),
-							Name:		tname,
-							Port:		port,
-							Address:	toIP(host),
-							Check:		&registry.Check{
-								TTL:	"",
-								Script: "",
-								HTTP: "",
-								Interval: "",
-							},
-							})
-					}
-				}
+				m.registerTask(&task, host)
+
 			}
 		}
 	}
@@ -164,7 +147,7 @@ func yankPorts(ports string) []int {
 	yports := []int{}
 
 	mports := strings.Split(lhs, ",")
-	for _,mport := range mports {
+	for _, mport := range mports {
 		pz := strings.Split(strings.TrimSpace(mport), "-")
 		lo, _ := strconv.Atoi(pz[0])
 		hi, _ := strconv.Atoi(pz[1])

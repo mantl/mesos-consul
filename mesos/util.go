@@ -28,7 +28,7 @@ func parsePID(pid string) (string, string) {
 
 	return toIP(host), port
 }
-	
+
 func leaderIP(leader string) string {
 	host := strings.Split(leader, "@")[1]
 	host = strings.Split(host, ":")[0]

@@ -1,19 +1,19 @@
 package registry
 
 type Check struct {
-	Script		string
-	TTL		string
-	HTTP		string
-	Interval	string
+	Script   string
+	TTL      string
+	HTTP     string
+	Interval string
 }
 
 type Service struct {
-	ID		string
-	Name		string
-	Port		int
-	Address		string
-	Tags		[]string
-	Check		*Check
+	ID      string
+	Name    string
+	Port    int
+	Address string
+	Tags    []string
+	Check   *Check
 }
 
 type Registry interface {
@@ -25,4 +25,13 @@ type Registry interface {
 
 	Register(*Service) error
 	Deregister() error
+}
+
+func DefaultCheck() *Check {
+	return &Check{
+		TTL:      "",
+		Script:   "",
+		HTTP:     "",
+		Interval: "",
+	}
 }

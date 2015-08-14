@@ -17,7 +17,7 @@ func (m *Mesos) LoadCache() error {
 	log.Print("[DEBUG] Populating cache from Consul")
 
 	host, _ := m.getLeader()
-	
+
 	return m.Registry.CacheLoad(host)
 }
 
@@ -31,14 +31,14 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 		port := toPort(p)
 
 		m.registerHost(&registry.Service{
-			ID:		fmt.Sprintf("mesos-consul:mesos:%s:%s", f.Id, f.Hostname),
-			Name:		"mesos",
-			Port:		port,
-			Address:	host,
-			Tags:		[]string{ "follower" },
-			Check:		&registry.Check{
-				HTTP:		fmt.Sprintf("http://%s:%d/slave(1)/health", host, port),
-				Interval:	"10s",
+			ID:      fmt.Sprintf("mesos-consul:mesos:%s:%s", f.Id, f.Hostname),
+			Name:    "mesos",
+			Port:    port,
+			Address: host,
+			Tags:    []string{"follower"},
+			Check: &registry.Check{
+				HTTP:     fmt.Sprintf("http://%s:%d/slave(1)/health", host, port),
+				Interval: "10s",
 			},
 		})
 	}
@@ -49,21 +49,21 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 		var tags []string
 
 		if ma.isLeader {
-			tags = []string{ "leader", "master" }
+			tags = []string{"leader", "master"}
 		} else {
-			tags = []string{ "master" }
+			tags = []string{"master"}
 		}
 		host := toIP(ma.host)
 		port := toPort(ma.port)
 		s := &registry.Service{
-			ID:		fmt.Sprintf("mesos-consul:mesos:%s:%s", ma.host, ma.port),
-			Name:		"mesos",
-			Port:		port,
-			Address:	host,
-			Tags:		tags,
-			Check:		&registry.Check{
-				HTTP:		fmt.Sprintf("http://%s:%d/master/health", host, port),
-				Interval:	"10s",
+			ID:      fmt.Sprintf("mesos-consul:mesos:%s:%s", ma.host, ma.port),
+			Name:    "mesos",
+			Port:    port,
+			Address: host,
+			Tags:    tags,
+			Check: &registry.Check{
+				HTTP:     fmt.Sprintf("http://%s:%d/master/health", host, port),
+				Interval: "10s",
 			},
 		}
 
@@ -78,7 +78,7 @@ func sliceEq(a, b []string) bool {
 		return false
 	}
 
-	for i := range a{
+	for i := range a {
 		if a[i] != b[i] {
 			return false
 		}
@@ -108,5 +108,28 @@ func (m *Mesos) registerHost(s *registry.Service) {
 	err := m.Registry.Register(s)
 	if err != nil {
 		log.Print("[ERROR] ", err)
+	}
+}
+
+func (m *Mesos) registerTask(t *Task, host string) {
+	tname := cleanName(t.Name)
+
+	if t.Resources.Ports != "" {
+		for _, port := range yankPorts(t.Resources.Ports) {
+			m.Registry.Register(&registry.Service{
+				ID:      fmt.Sprintf("mesos-consul:%s:%s:%d", host, tname, port),
+				Name:    tname,
+				Port:    port,
+				Address: toIP(host),
+				Check:   t.GetCheck(),
+			})
+		}
+	} else {
+		m.Registry.Register(&registry.Service{
+			ID:      fmt.Sprintf("mesos-consul:%s-%s", host, tname),
+			Name:    tname,
+			Address: toIP(host),
+			Check:   t.GetCheck(),
+		})
 	}
 }

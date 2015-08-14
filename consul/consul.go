@@ -12,15 +12,15 @@ import (
 )
 
 type Consul struct {
-	agents		map[string]*consulapi.Client
-	config		consulConfig
+	agents map[string]*consulapi.Client
+	config consulConfig
 }
 
 //
 func New() *Consul {
 	return &Consul{
-		agents:		make(map[string]*consulapi.Client),
-		config:		config,
+		agents: make(map[string]*consulapi.Client),
+		config: config,
 	}
 }
 
@@ -32,15 +32,13 @@ func (c *Consul) client(address string) *consulapi.Client {
 		return nil
 	}
 
-        if _, ok := c.agents[address]; !ok {
-                // Agent connection not saved. Connect.
-                c.agents[address] = c.newAgent(address)
-        }
+	if _, ok := c.agents[address]; !ok {
+		// Agent connection not saved. Connect.
+		c.agents[address] = c.newAgent(address)
+	}
 
-        return c.agents[address]
+	return c.agents[address]
 }
-
-	
 
 // newAgent()
 //   Connect to a new agent specified by address
@@ -67,8 +65,8 @@ func (c *Consul) newAgent(address string) *consulapi.Client {
 
 	if !c.config.sslVerify {
 		log.Printf("[DEBUG] disabled SSL verification")
-		config.HttpClient.Transport = &http.Transport {
-			TLSClientConfig: &tls.Config {
+		config.HttpClient.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},
 		}
@@ -104,22 +102,22 @@ func (c *Consul) Register(service *registry.Service) error {
 	log.Print("[INFO] Registering ", service.ID)
 
 	s := &consulapi.AgentServiceRegistration{
-		ID:		service.ID,
-		Name:		service.Name,
-		Port:		service.Port,
-		Address:	service.Address,
-		Tags:		service.Tags,
-		Check:		&consulapi.AgentServiceCheck{
-			TTL:		service.Check.TTL,
-			Script:		service.Check.Script,
-			HTTP:		service.Check.HTTP,
-			Interval:	service.Check.Interval,
+		ID:      service.ID,
+		Name:    service.Name,
+		Port:    service.Port,
+		Address: service.Address,
+		Tags:    service.Tags,
+		Check: &consulapi.AgentServiceCheck{
+			TTL:      service.Check.TTL,
+			Script:   service.Check.Script,
+			HTTP:     service.Check.HTTP,
+			Interval: service.Check.Interval,
 		},
 	}
 
 	serviceCache[s.ID] = &cacheEntry{
-		service:	s,
-		isRegistered:	true,
+		service:      s,
+		isRegistered: true,
 	}
 
 	return c.agents[service.Address].Agent().ServiceRegister(s)

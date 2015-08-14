@@ -6,12 +6,12 @@ import (
 
 	"github.com/CiscoCloud/mesos-consul/registry"
 
-	consulapi	"github.com/hashicorp/consul/api"
+	consulapi "github.com/hashicorp/consul/api"
 )
 
 type cacheEntry struct {
-	service		*consulapi.AgentServiceRegistration
-	isRegistered	bool
+	service      *consulapi.AgentServiceRegistration
+	isRegistered bool
 }
 
 // Service cache
@@ -42,17 +42,17 @@ func (c *Consul) CacheLoad(host string) error {
 		}
 
 		for _, s := range catalogServices {
-			if strings.HasPrefix(s.ServiceID, "mesos-consul:")  {
+			if strings.HasPrefix(s.ServiceID, "mesos-consul:") {
 				log.Printf("[DEBUG] Found '%s' with ID '%s'", s.ServiceName, s.ServiceID)
 				serviceCache[s.ServiceID] = &cacheEntry{
-					service:	&consulapi.AgentServiceRegistration{
-							ID:		s.ServiceID,
-							Name:		s.ServiceName,
-							Port:		s.ServicePort,
-							Address:	s.ServiceAddress,
-							Tags:		s.ServiceTags,
-							},
-					isRegistered:   false,
+					service: &consulapi.AgentServiceRegistration{
+						ID:      s.ServiceID,
+						Name:    s.ServiceName,
+						Port:    s.ServicePort,
+						Address: s.ServiceAddress,
+						Tags:    s.ServiceTags,
+					},
+					isRegistered: false,
 				}
 			}
 		}
@@ -68,11 +68,11 @@ func (c *Consul) CacheLookup(id string) *registry.Service {
 		s := serviceCache[id].service
 
 		return &registry.Service{
-			ID:		s.ID,
-			Name:		s.Name,
-			Port:		s.Port,
-			Address:	s.Address,
-			Tags:		s.Tags,
+			ID:      s.ID,
+			Name:    s.Name,
+			Port:    s.Port,
+			Address: s.Address,
+			Tags:    s.Tags,
 		}
 	}
 

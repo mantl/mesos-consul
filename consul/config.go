@@ -8,28 +8,28 @@ import (
 )
 
 type consulConfig struct {
-	enabled		bool
-        auth            auth
-        port            string
-        sslEnabled      bool
-        sslVerify       bool
-        sslCert         string
-        sslCaCert       string
-        token           string
+	enabled    bool
+	auth       auth
+	port       string
+	sslEnabled bool
+	sslVerify  bool
+	sslCert    string
+	sslCaCert  string
+	token      string
 }
 
 // XXX -Rename to config after removing config import
 var config consulConfig
 
 func AddCmdFlags(f *flag.FlagSet) {
-	f.BoolVar(&config.enabled,	"consul", false, "")
-        f.StringVar(&config.port,      "consul-port", "8500", "")
-        f.Var((*authVar)(&config.auth), "consul-auth", "")
-        f.BoolVar(&config.sslEnabled, "consul-ssl", false, "")
-        f.BoolVar(&config.sslVerify, "consul-ssl-verify", true, "")
-        f.StringVar(&config.sslCert, "consul-ssl-cert", "", "")
-        f.StringVar(&config.sslCaCert, "consul-ssl-cacert", "", "")
-        f.StringVar(&config.token, "consul-token", "", "")
+	f.BoolVar(&config.enabled, "consul", false, "")
+	f.StringVar(&config.port, "consul-port", "8500", "")
+	f.Var((*authVar)(&config.auth), "consul-auth", "")
+	f.BoolVar(&config.sslEnabled, "consul-ssl", false, "")
+	f.BoolVar(&config.sslVerify, "consul-ssl-verify", true, "")
+	f.StringVar(&config.sslCert, "consul-ssl-cert", "", "")
+	f.StringVar(&config.sslCaCert, "consul-ssl-cacert", "", "")
+	f.StringVar(&config.token, "consul-token", "", "")
 }
 
 func Help() string {
@@ -66,9 +66,9 @@ func IsEnabled() bool {
 }
 
 type auth struct {
-	Enabled		bool
-	Username	string
-	Password	string
+	Enabled  bool
+	Username string
+	Password string
 }
 
 // AuthVar implements the Flag.Value interface and allows the user to specify
@@ -78,7 +78,7 @@ type authVar auth
 func (a *authVar) Set(value string) error {
 	a.Enabled = true
 
-	if (strings.Contains(value, ":")) {
+	if strings.Contains(value, ":") {
 		split := strings.SplitN(value, ":", 2)
 		a.Username = split[0]
 		a.Password = split[1]
