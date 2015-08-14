@@ -19,10 +19,13 @@ var serviceCache map[string]*cacheEntry
 
 // CacheCreate()
 //
-func (c *Consul) CacheCreate() {
+func (c *Consul) CacheCreate() bool {
 	if serviceCache == nil {
 		serviceCache = make(map[string]*cacheEntry)
+		return true
 	}
+
+	return false
 }
 
 // Initialize the service cache

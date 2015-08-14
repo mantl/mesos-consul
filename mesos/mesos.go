@@ -43,7 +43,9 @@ func New(c *config.Config) *Mesos {
 		log.Fatal("[ERROR] No registry specified")
 	}
 
-	m.Registry.CacheCreate()
+	if m.Registry.CacheCreate() {
+		m.LoadCache()
+	}
 
 	m.zkDetector(c.Zk)
 
