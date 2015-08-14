@@ -30,13 +30,13 @@ func (t *Task) GetCheck() *registry.Check {
 		k := strings.ToLower(l.Key)
 
 		switch k {
-		case "consul_http_check":
+		case "check_http":
 			c.HTTP = l.Value
-		case "consul_script_check":
+		case "check_script":
 			c.Script = l.Value
-		case "consul_ttl_check":
+		case "check_ttl":
 			c.TTL = l.Value
-		case "consul_check_interval":
+		case "check_interval":
 			c.Interval = l.Value
 		}
 	}
