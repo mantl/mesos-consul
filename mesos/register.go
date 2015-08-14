@@ -121,7 +121,10 @@ func (m *Mesos) registerTask(t *Task, host string) {
 				Name:    tname,
 				Port:    port,
 				Address: toIP(host),
-				Check:   t.GetCheck(),
+				Check:   t.GetCheck(&CheckVar{
+					Host: toIP(host),
+					Port: fmt.Sprintf("%d", port),
+				}),
 			})
 		}
 	} else {
@@ -129,7 +132,9 @@ func (m *Mesos) registerTask(t *Task, host string) {
 			ID:      fmt.Sprintf("mesos-consul:%s-%s", host, tname),
 			Name:    tname,
 			Address: toIP(host),
-			Check:   t.GetCheck(),
+			Check:   t.GetCheck(&CheckVar{
+				Host: toIP(host),
+			}),
 		})
 	}
 }

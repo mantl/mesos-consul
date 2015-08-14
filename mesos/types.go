@@ -42,3 +42,4 @@ type MesosHost struct {
 	isLeader     bool
 	isRegistered bool
 }
+
