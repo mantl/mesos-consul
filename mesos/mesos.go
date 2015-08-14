@@ -43,10 +43,6 @@ func New(c *config.Config) *Mesos {
 		log.Fatal("[ERROR] No registry specified")
 	}
 
-	if m.Registry.CacheCreate() {
-		m.LoadCache()
-	}
-
 	m.zkDetector(c.Zk)
 
 	return m
@@ -62,6 +58,11 @@ func (m *Mesos) Refresh() error {
 	if sj.Leader == "" {
 		return errors.New("Empty master")
 	}
+
+	if m.Registry.CacheCreate() {
+		m.LoadCache()
+	}
+
 
 	m.parseState(sj)
 
