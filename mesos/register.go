@@ -5,6 +5,8 @@ import (
 	"log"
 	"strings"
 
+	"github.com/CiscoCloud/mesos-consul/consul"
+
 	consulapi "github.com/hashicorp/consul/api"
 )
 
@@ -18,7 +20,7 @@ func (m *Mesos) LoadCache() error {
 	log.Print("[DEBUG] Populating cache from Consul")
 
 	host, _ := m.getLeader()
-	
+
 	client := m.Consul.Client(host).Catalog()
 
 	serviceList, _, err := client.Services(nil)
@@ -33,17 +35,19 @@ func (m *Mesos) LoadCache() error {
 		}
 
 		for _, s := range catalogServices {
-			if strings.HasPrefix(s.ServiceID, "mesos-consul:")  {
+			if strings.HasPrefix(s.ServiceID, "mesos-consul:") {
 				log.Printf("[DEBUG] Found '%s' with ID '%s'", s.ServiceName, s.ServiceID)
 				m.ServiceCache[s.ServiceID] = &CacheEntry{
-					service:	&consulapi.AgentServiceRegistration{
-							ID:		s.ServiceID,
-							Name:		s.ServiceName,
-							Port:		s.ServicePort,
-							Address:	s.ServiceAddress,
-							Tags:		s.ServiceTags,
-							},
-					isRegistered:	false,
+					service: consul.NewRegistration(
+						&consulapi.AgentServiceRegistration{
+							ID:      s.ServiceID,
+							Name:    s.ServiceName,
+							Port:    s.ServicePort,
+							Address: s.ServiceAddress,
+							Tags:    s.ServiceTags,
+						},
+					),
+					isRegistered: false,
 				}
 			}
 		}
@@ -62,14 +66,14 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 		port := toPort(p)
 
 		m.registerHost(&consulapi.AgentServiceRegistration{
-			ID:		fmt.Sprintf("mesos-consul:mesos:%s:%s", f.Id, f.Hostname),
-			Name:		"mesos",
-			Port:		port,
-			Address:	host,
-			Tags:		[]string{ "follower" },
-			Check:		&consulapi.AgentServiceCheck{
-				HTTP:		fmt.Sprintf("http://%s:%d/slave(1)/health", host, port),
-				Interval:	"10s",
+			ID:      fmt.Sprintf("mesos-consul:mesos:%s:%s", f.Id, f.Hostname),
+			Name:    "mesos",
+			Port:    port,
+			Address: host,
+			Tags:    []string{"follower"},
+			Check: &consulapi.AgentServiceCheck{
+				HTTP:     fmt.Sprintf("http://%s:%d/slave(1)/health", host, port),
+				Interval: "10s",
 			},
 		})
 	}
@@ -80,21 +84,21 @@ func (m *Mesos) RegisterHosts(sj StateJSON) {
 		var tags []string
 
 		if ma.isLeader {
-			tags = []string{ "leader", "master" }
+			tags = []string{"leader", "master"}
 		} else {
-			tags = []string{ "master" }
+			tags = []string{"master"}
 		}
 		host := toIP(ma.host)
 		port := toPort(ma.port)
 		s := &consulapi.AgentServiceRegistration{
-			ID:		fmt.Sprintf("mesos-consul:mesos:%s:%s", ma.host, ma.port),
-			Name:		"mesos",
-			Port:		port,
-			Address:	host,
-			Tags:		tags,
-			Check:		&consulapi.AgentServiceCheck{
-				HTTP:		fmt.Sprintf("http://%s:%d/master/health", host, port),
-				Interval:	"10s",
+			ID:      fmt.Sprintf("mesos-consul:mesos:%s:%s", ma.host, ma.port),
+			Name:    "mesos",
+			Port:    port,
+			Address: host,
+			Tags:    tags,
+			Check: &consulapi.AgentServiceCheck{
+				HTTP:     fmt.Sprintf("http://%s:%d/master/health", host, port),
+				Interval: "10s",
 			},
 		}
 
@@ -109,7 +113,7 @@ func sliceEq(a, b []string) bool {
 		return false
 	}
 
-	for i := range a{
+	for i := range a {
 		if a[i] != b[i] {
 			return false
 		}
@@ -121,9 +125,9 @@ func sliceEq(a, b []string) bool {
 func (m *Mesos) registerHost(s *consulapi.AgentServiceRegistration) {
 
 	if _, ok := m.ServiceCache[s.ID]; ok {
-		log.Printf("[INFO] Host found. Comparing tags: (%v, %v)", m.ServiceCache[s.ID].service.Tags, s.Tags)
+		log.Printf("[INFO] Host found. Comparing tags: (%v, %v)", m.ServiceCache[s.ID].service.Registration.Tags, s.Tags)
 
-		if sliceEq(s.Tags, m.ServiceCache[s.ID].service.Tags) {
+		if sliceEq(s.Tags, m.ServiceCache[s.ID].service.Registration.Tags) {
 			m.ServiceCache[s.ID].isRegistered = true
 
 			// Tags are the same. Return
@@ -136,33 +140,34 @@ func (m *Mesos) registerHost(s *consulapi.AgentServiceRegistration) {
 		delete(m.ServiceCache, s.ID)
 	}
 
+	sr := consul.NewRegistration(s)
+
 	m.ServiceCache[s.ID] = &CacheEntry{
-		service:		s,
-		isRegistered:		true,
+		service:      sr,
+		isRegistered: true,
 	}
 
-
-	err := m.Consul.Register(s)
+	err := m.Consul.Register(sr)
 	if err != nil {
 		log.Print("[ERROR] ", err)
 	}
 }
 
-func (m *Mesos) register(s *consulapi.AgentServiceRegistration) {
-	if _, ok := m.ServiceCache[s.ID]; ok {
-		log.Printf("[INFO] Service found. Not registering: %s", s.ID)
-		m.ServiceCache[s.ID].isRegistered = true
+func (m *Mesos) register(sr *consul.ServiceRegistration) {
+	if _, ok := m.ServiceCache[sr.Registration.ID]; ok {
+		log.Printf("[INFO] Service found. Not registering: %s", sr.Registration.ID)
+		m.ServiceCache[sr.Registration.ID].isRegistered = true
 		return
 	}
 
-	log.Print("[INFO] Registering ", s.ID)
+	log.Print("[INFO] Registering ", sr.Registration.ID)
 
-	m.ServiceCache[s.ID] = &CacheEntry{
-		service:		s,
-		isRegistered:		true,
+	m.ServiceCache[sr.Registration.ID] = &CacheEntry{
+		service:      sr,
+		isRegistered: true,
 	}
 
-	err := m.Consul.Register(s)
+	err := m.Consul.Register(sr)
 	if err != nil {
 		log.Print("[ERROR] ", err)
 	}

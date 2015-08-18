@@ -11,15 +11,26 @@ import (
 )
 
 type Consul struct {
-	agents		map[string]*consulapi.Client
-	config		*config.Config
+	agents map[string]*consulapi.Client
+	config *config.Config
+}
+
+// Wraps the AgentServiceRegistration struct to allow storing agent separately
+type ServiceRegistration struct {
+	Agent        string
+	Registration *consulapi.AgentServiceRegistration
+}
+
+// Instantiates a new ServiceRegistration struct
+func NewRegistration(asr *consulapi.AgentServiceRegistration) *ServiceRegistration {
+	return &ServiceRegistration{Agent: asr.Address, Registration: asr}
 }
 
 //
 func NewConsul(c *config.Config) *Consul {
 	return &Consul{
-		agents:		make(map[string]*consulapi.Client),
-		config:		c,
+		agents: make(map[string]*consulapi.Client),
+		config: c,
 	}
 }
 
@@ -31,15 +42,13 @@ func (c *Consul) Client(address string) *consulapi.Client {
 		return nil
 	}
 
-        if _, ok := c.agents[address]; !ok {
-                // Agent connection not saved. Connect.
-                c.agents[address] = c.newAgent(address)
-        }
+	if _, ok := c.agents[address]; !ok {
+		// Agent connection not saved. Connect.
+		c.agents[address] = c.newAgent(address)
+	}
 
-        return c.agents[address]
+	return c.agents[address]
 }
-
-	
 
 // newAgent()
 //   Connect to a new agent specified by address
@@ -66,8 +75,8 @@ func (c *Consul) newAgent(address string) *consulapi.Client {
 
 	if !c.config.RegistrySSL.Verify {
 		log.Printf("[DEBUG] disabled SSL verification")
-		config.HttpClient.Transport = &http.Transport {
-			TLSClientConfig: &tls.Config {
+		config.HttpClient.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},
 		}
@@ -88,22 +97,22 @@ func (c *Consul) newAgent(address string) *consulapi.Client {
 	return client
 }
 
-func (r *Consul) Register(service *consulapi.AgentServiceRegistration) error {
-	if _, ok := r.agents[service.Address]; !ok {
+func (r *Consul) Register(sr *ServiceRegistration) error {
+	if _, ok := r.agents[sr.Agent]; !ok {
 		// Agent connection not saved. Connect.
-		r.agents[service.Address] = r.newAgent(service.Address)
+		r.agents[sr.Agent] = r.newAgent(sr.Agent)
 	}
 
-	return r.agents[service.Address].Agent().ServiceRegister(service)
+	return r.agents[sr.Agent].Agent().ServiceRegister(sr.Registration)
 }
 
-func (r *Consul) Deregister(service *consulapi.AgentServiceRegistration) error {
-	if _, ok := r.agents[service.Address]; !ok {
+func (r *Consul) Deregister(sr *ServiceRegistration) error {
+	if _, ok := r.agents[sr.Agent]; !ok {
 		log.Print("[WARN] Deregistering a service without an agent connection?!")
 
 		// Agent connection not saved. Connect.
-		r.agents[service.Address] = r.newAgent(service.Address)
+		r.agents[sr.Agent] = r.newAgent(sr.Agent)
 	}
 
-	return r.agents[service.Address].Agent().ServiceDeregister(service.ID)
+	return r.agents[sr.Agent].Agent().ServiceDeregister(sr.Registration.ID)
 }

@@ -28,9 +28,9 @@ func main() {
 	leader := mesos.New(c, consul.NewConsul(c))
 
 	ticker := time.NewTicker(c.Refresh)
-        leader.Refresh()
+	leader.Refresh()
 	for _ = range ticker.C {
-	        leader.Refresh()
+		leader.Refresh()
 	}
 }
 
@@ -43,17 +43,17 @@ func parseFlags(args []string) (*config.Config, error) {
 		fmt.Print(usage)
 	}
 
-	flags.BoolVar(&doHelp,			"help", false, "")
-	flags.StringVar(&c.LogLevel,		"log-level", "WARN", "")
-	flags.DurationVar(&c.Refresh,		"refresh", time.Minute, "")
-	flags.StringVar(&c.RegistryPort,	"registry-port", "8500", "")
-	flags.Var((*config.AuthVar)(c.RegistryAuth),	"registry-auth", "")
-	flags.BoolVar(&c.RegistrySSL.Enabled,	"registry-ssl", c.RegistrySSL.Enabled, "")
-	flags.BoolVar(&c.RegistrySSL.Verify,	"registry-ssl-verify", c.RegistrySSL.Verify, "")
-	flags.StringVar(&c.RegistrySSL.Cert,	"registry-ssl-cert", c.RegistrySSL.Cert, "")
-	flags.StringVar(&c.RegistrySSL.CaCert,	"registry-ssl-cacert", c.RegistrySSL.CaCert, "")
-	flags.StringVar(&c.RegistryToken,		"registry-token", c.RegistryToken, "")
-	flags.StringVar(&c.Zk,			"zk", "zk://127.0.0.1:2181/mesos", "")
+	flags.BoolVar(&doHelp, "help", false, "")
+	flags.StringVar(&c.LogLevel, "log-level", "WARN", "")
+	flags.DurationVar(&c.Refresh, "refresh", time.Minute, "")
+	flags.StringVar(&c.RegistryPort, "registry-port", "8500", "")
+	flags.Var((*config.AuthVar)(c.RegistryAuth), "registry-auth", "")
+	flags.BoolVar(&c.RegistrySSL.Enabled, "registry-ssl", c.RegistrySSL.Enabled, "")
+	flags.BoolVar(&c.RegistrySSL.Verify, "registry-ssl-verify", c.RegistrySSL.Verify, "")
+	flags.StringVar(&c.RegistrySSL.Cert, "registry-ssl-cert", c.RegistrySSL.Cert, "")
+	flags.StringVar(&c.RegistrySSL.CaCert, "registry-ssl-cacert", c.RegistrySSL.CaCert, "")
+	flags.StringVar(&c.RegistryToken, "registry-token", c.RegistryToken, "")
+	flags.StringVar(&c.Zk, "zk", "zk://127.0.0.1:2181/mesos", "")
 
 	if err := flags.Parse(args); err != nil {
 		return nil, err
@@ -64,16 +64,16 @@ func parseFlags(args []string) (*config.Config, error) {
 		return nil, fmt.Errorf("extra argument(s): %q", args)
 	}
 
-	if (doHelp) {
+	if doHelp {
 		flags.Usage()
 		os.Exit(0)
 	}
 
 	logging.Setup(&logging.Config{
-		Name:		"mesos-consul",
-		Level:		c.LogLevel,
-		Writer:		os.Stderr,
-		})
+		Name:   "mesos-consul",
+		Level:  c.LogLevel,
+		Writer: os.Stderr,
+	})
 
 	return c, nil
 }

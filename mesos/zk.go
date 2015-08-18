@@ -14,7 +14,7 @@ import (
 )
 
 func (m *Mesos) zkDetector(zkURI string) {
-	if (zkURI == "") {
+	if zkURI == "" {
 		log.Fatal("[ERROR] Zookeeper address not provided")
 	}
 
@@ -91,11 +91,11 @@ func (m *Mesos) getMasters() []MesosHost {
 	ms := make([]MesosHost, len(*m.Masters))
 	for i, msp := range *m.Masters {
 		mh := MesosHost{
-			host:		msp.host,
-			port:		msp.port,
-			isLeader:	msp.isLeader,
+			host:     msp.host,
+			port:     msp.port,
+			isLeader: msp.isLeader,
 		}
-			
+
 		ms[i] = mh
 	}
 	return ms
@@ -111,7 +111,7 @@ func (m *Mesos) hostFromMasterInfo(mi *mesosproto.MasterInfo) MesosHost {
 			if err != nil {
 				ipstring = host
 			} else {
-				for _,i := range(ip) {
+				for _, i := range ip {
 					four := i.To4()
 					if four != nil {
 						ipstring = i.String()
@@ -134,11 +134,10 @@ func (m *Mesos) hostFromMasterInfo(mi *mesosproto.MasterInfo) MesosHost {
 	if len(ipstring) > 0 {
 		port = fmt.Sprint(mi.GetPort())
 	}
-		
 
 	return MesosHost{
-		host:		ipstring,
-		port:		port,
-		isLeader:	false,
+		host:     ipstring,
+		port:     port,
+		isLeader: false,
 	}
 }

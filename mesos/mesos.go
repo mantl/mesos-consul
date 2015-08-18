@@ -18,7 +18,7 @@ import (
 )
 
 type CacheEntry struct {
-	service      *consulapi.AgentServiceRegistration
+	service      *consul.ServiceRegistration
 	isRegistered bool
 }
 
@@ -27,6 +27,11 @@ type Mesos struct {
 	Masters      *[]MesosHost
 	Lock         sync.Mutex
 	ServiceCache map[string]*CacheEntry
+}
+
+var ipLabels = map[string]string{
+	"docker": "Docker.NetworkSettings.IPAddress",
+	"mesos":  "MesosContainerizer.NetworkSettings.IPAddress",
 }
 
 func New(c *config.Config, consul *consul.Consul) *Mesos {
@@ -130,22 +135,36 @@ func (m *Mesos) parseState(sj StateJSON) {
 			host, err := sj.Followers.hostById(task.FollowerId)
 			if err == nil && task.State == "TASK_RUNNING" {
 				tname := cleanName(task.Name)
-				if task.Resources.Ports != "" {
+
+				// Container IP discovery stolen from mesos-dns
+				ip := task.IP(host)
+				agent := toIP(host)
+				log.Printf("[DEBUG] Discovered task %s with ip %s on host %s", tname, ip, agent)
+
+				if task.Resources.Ports != "" && ip == agent {
 					for _, port := range yankPorts(task.Resources.Ports) {
-						m.register(&consulapi.AgentServiceRegistration{
-							ID:      fmt.Sprintf("mesos-consul:%s:%s:%d", host, tname, port),
-							Name:    tname,
-							Port:    port,
-							Address: toIP(host),
-						})
+						sr := consul.NewRegistration(
+							&consulapi.AgentServiceRegistration{
+								ID:      fmt.Sprintf("mesos-consul:%s:%s:%d", host, tname, port),
+								Name:    tname,
+								Port:    port,
+								Address: ip,
+							},
+						)
+						m.register(sr)
 					}
 				} else {
-					m.register(&consulapi.AgentServiceRegistration{
-						ID:      fmt.Sprintf("mesos-consul:%s-%s", host, tname),
-						Name:    tname,
-						Address: toIP(host),
-					})
+					sr := consul.NewRegistration(
+						&consulapi.AgentServiceRegistration{
+							ID:      fmt.Sprintf("mesos-consul:%s-%s", host, tname),
+							Name:    tname,
+							Address: ip,
+						},
+					)
+					sr.Agent = agent
+					m.register(sr)
 				}
+
 			}
 		}
 	}
@@ -172,4 +191,42 @@ func yankPorts(ports string) []int {
 	}
 
 	return yports
+}
+
+// Iterate our source options and get the first IP we can
+func (t *Task) IP(host string) string {
+	var srcs = []string{"docker", "mesos", "host"}
+
+	for _, src := range srcs {
+		switch src {
+		case "host":
+			return toIP(host)
+		case "docker", "mesos":
+			return t.containerIP(src)
+		}
+	}
+	return ""
+}
+
+// Find the IP of a specific container
+func (t *Task) containerIP(src string) string {
+	ipLabel := ipLabels[src]
+
+	var latestContainerIP string
+	var latestTimestamp float64
+	for _, status := range t.Statuses {
+		if status.State != "TASK_RUNNING" || status.Timestamp <= latestTimestamp {
+			continue
+		}
+
+		for _, label := range status.Labels {
+			if label.Key == ipLabel {
+				latestContainerIP = label.Value
+				latestTimestamp = status.Timestamp
+				break
+			}
+		}
+	}
+
+	return latestContainerIP
 }
