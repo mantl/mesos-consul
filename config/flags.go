@@ -12,7 +12,7 @@ type AuthVar Auth
 func (a *AuthVar) Set(value string) error {
 	a.Enabled = true
 
-	if (strings.Contains(value, ":")) {
+	if strings.Contains(value, ":") {
 		split := strings.SplitN(value, ":", 2)
 		a.Username = split[0]
 		a.Password = split[1]
