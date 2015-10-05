@@ -64,6 +64,4 @@ func varReplace(s string) string {
 	default:
 		return s
 	}
-
-	return s
 }
