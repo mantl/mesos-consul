@@ -16,7 +16,7 @@ import (
 )
 
 const Name = "mesos-consul"
-const Version = "0.2"
+const Version = "0.3"
 
 func main() {
 	c, err := parseFlags(os.Args[1:])
