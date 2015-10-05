@@ -52,6 +52,7 @@ func (c *Consul) newAgent(address string) *consulapi.Client {
 	config := consulapi.DefaultConfig()
 
 	config.Address = fmt.Sprintf("%s:%s", address, c.config.port)
+	log.Printf("[DEBUG] consul address: %s", config.Address)
 
 	if c.config.token != "" {
 		log.Printf("[DEBUG] setting token to %s", c.config.token)
@@ -94,9 +95,9 @@ func (c *Consul) Register(service *registry.Service) error {
 		return nil
 	}
 
-	if _, ok := c.agents[service.Address]; !ok {
+	if _, ok := c.agents[service.Agent]; !ok {
 		// Agent connection not saved. Connect.
-		c.agents[service.Address] = c.newAgent(service.Address)
+		c.agents[service.Agent] = c.newAgent(service.Agent)
 	}
 
 	log.Print("[INFO] Registering ", service.ID)
@@ -120,7 +121,7 @@ func (c *Consul) Register(service *registry.Service) error {
 		isRegistered: true,
 	}
 
-	return c.agents[service.Address].Agent().ServiceRegister(s)
+	return c.agents[service.Agent].Agent().ServiceRegister(s)
 }
 
 // Deregister()
