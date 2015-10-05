@@ -12,8 +12,9 @@ import (
 	"github.com/CiscoCloud/mesos-consul/consul"
 	"github.com/CiscoCloud/mesos-consul/registry"
 
-	"github.com/mesosphere/mesos-dns/records/state"
 	consulapi "github.com/hashicorp/consul/api"
+	proto "github.com/mesos/mesos-go/mesosproto"
+	"github.com/mesosphere/mesos-dns/records/state"
 )
 
 type CacheEntry struct {
@@ -23,9 +24,11 @@ type CacheEntry struct {
 
 type Mesos struct {
 	Registry registry.Registry
-	Masters  *[]MesosHost
 	Agents   map[string]string
 	Lock     sync.Mutex
+
+	Leader  *proto.MasterInfo
+	Masters []*proto.MasterInfo
 }
 
 func New(c *config.Config) *Mesos {
@@ -51,7 +54,7 @@ func New(c *config.Config) *Mesos {
 func (m *Mesos) Refresh() error {
 	sj, err := m.loadState()
 	if err != nil {
-		log.Print("[ERROR] No master")
+		log.Print("[WARN] loadState failed: ", err.Error())
 		return err
 	}
 
@@ -63,7 +66,6 @@ func (m *Mesos) Refresh() error {
 		m.LoadCache()
 	}
 
-
 	m.parseState(sj)
 
 	return nil
@@ -73,25 +75,27 @@ func (m *Mesos) loadState() (state.State, error) {
 	var err error
 	var sj state.State
 
+	log.Printf("[DEBUG] loadState() called")
+
 	defer func() {
 		if rec := recover(); rec != nil {
 			err = errors.New("can't connect to Mesos")
 		}
 	}()
 
-	ip, port := m.getLeader()
-	if ip == "" {
+	mh := m.getLeader()
+	if mh.Ip == "" {
 		return sj, errors.New("No master in zookeeper")
 	}
 
-	log.Printf("[INFO] Zookeeper leader: %s:%s", ip, port)
+	log.Printf("[INFO] Zookeeper leader: %s:%s", mh.Ip, mh.PortString)
 
-	log.Print("[INFO] reloading from master ", ip)
-	sj = m.loadFromMaster(ip, port)
+	log.Print("[INFO] reloading from master ", mh.Ip)
+	sj = m.loadFromMaster(mh.Ip, mh.PortString)
 
-	if rip := leaderIP(sj.Leader); rip != ip {
+	if rip := leaderIP(sj.Leader); rip != mh.Ip {
 		log.Print("[WARN] master changed to ", rip)
-		sj = m.loadFromMaster(rip, port)
+		sj = m.loadFromMaster(rip, mh.PortString)
 	}
 
 	return sj, err

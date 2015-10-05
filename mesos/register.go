@@ -18,9 +18,9 @@ import (
 func (m *Mesos) LoadCache() error {
 	log.Print("[DEBUG] Populating cache from Consul")
 
-	host, _ := m.getLeader()
+	mh := m.getLeader()
 
-	return m.Registry.CacheLoad(host)
+	return m.Registry.CacheLoad(mh.Ip)
 }
 
 func (m *Mesos) RegisterHosts(s state.State) {
@@ -53,21 +53,19 @@ func (m *Mesos) RegisterHosts(s state.State) {
 	for _, ma := range mas {
 		var tags []string
 
-		if ma.isLeader {
+		if ma.IsLeader {
 			tags = []string{"leader", "master"}
 		} else {
 			tags = []string{"master"}
 		}
-		host := toIP(ma.host)
-		port := toPort(ma.port)
 		s := &registry.Service{
-			ID:      fmt.Sprintf("mesos-consul:mesos:%s:%s", ma.host, ma.port),
+			ID:      fmt.Sprintf("mesos-consul:mesos:%s:%s", ma.Ip, ma.PortString),
 			Name:    "mesos",
-			Port:    port,
-			Address: host,
+			Port:    ma.Port,
+			Address: ma.Ip,
 			Tags:    tags,
 			Check: &registry.Check{
-				HTTP:     fmt.Sprintf("http://%s:%d/master/health", host, port),
+				HTTP:     fmt.Sprintf("http://%s:%d/master/health", ma.Ip, ma.Port),
 				Interval: "10s",
 			},
 		}
@@ -116,7 +114,7 @@ func (m *Mesos) registerHost(s *registry.Service) {
 	}
 }
 
-var ipSources = []string{ "docker", "mesos", "host" }
+var ipSources = []string{"docker", "mesos", "host"}
 
 func (m *Mesos) registerTask(t *state.Task, agent string) {
 	tname := cleanName(t.Name)
@@ -130,11 +128,11 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 				Name:    tname,
 				Port:    toPort(port),
 				Address: address,
-				Check:   GetCheck(t, &CheckVar{
+				Check: GetCheck(t, &CheckVar{
 					Host: toIP(address),
 					Port: fmt.Sprintf("%d", port),
 				}),
-				Agent:   toIP(agent),
+				Agent: toIP(agent),
 			})
 		}
 	} else {
@@ -142,10 +140,10 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 			ID:      fmt.Sprintf("mesos-consul:%s-%s", agent, tname),
 			Name:    tname,
 			Address: address,
-			Check:   GetCheck(t, &CheckVar{
+			Check: GetCheck(t, &CheckVar{
 				Host: toIP(address),
 			}),
-			Agent:   toIP(agent),
+			Agent: toIP(agent),
 		})
 	}
 }

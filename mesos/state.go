@@ -13,6 +13,7 @@ type CheckVar struct {
 	Host string
 	Port string
 }
+
 var globalCV *CheckVar
 
 // Task Methods
