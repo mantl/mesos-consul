@@ -35,7 +35,7 @@ import (
 
 const (
 	// prefix for nodes listed at the ZK URL path
-	nodePrefix = "info_"
+	nodePrefix = "json.info_"
 )
 
 // reasonable default for a noop change listener

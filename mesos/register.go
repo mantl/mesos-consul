@@ -5,6 +5,8 @@ import (
 	"log"
 
 	"github.com/CiscoCloud/mesos-consul/registry"
+
+	"github.com/mesosphere/mesos-dns/records/state"
 )
 
 // Query the consul agent on the Mesos Master
@@ -21,23 +23,26 @@ func (m *Mesos) LoadCache() error {
 	return m.Registry.CacheLoad(host)
 }
 
-func (m *Mesos) RegisterHosts(sj StateJSON) {
+func (m *Mesos) RegisterHosts(s state.State) {
 	log.Print("[INFO] Running RegisterHosts")
 
-	// Register followers
-	for _, f := range sj.Followers {
-		h, p := parsePID(f.Pid)
-		host := toIP(h)
-		port := toPort(p)
+	m.Agents = make(map[string]string)
+
+	// Register slaves
+	for _, f := range s.Slaves {
+		agent := toIP(f.PID.Host)
+		port := toPort(f.PID.Port)
+
+		m.Agents[f.ID] = agent
 
 		m.registerHost(&registry.Service{
-			ID:      fmt.Sprintf("mesos-consul:mesos:%s:%s", f.Id, f.Hostname),
+			ID:      fmt.Sprintf("mesos-consul:mesos:%s:%s", f.ID, f.Hostname),
 			Name:    "mesos",
 			Port:    port,
-			Address: host,
+			Address: agent,
 			Tags:    []string{"follower"},
 			Check: &registry.Check{
-				HTTP:     fmt.Sprintf("http://%s:%d/slave(1)/health", host, port),
+				HTTP:     fmt.Sprintf("http://%s:%d/slave(1)/health", agent, port),
 				Interval: "10s",
 			},
 		})
@@ -111,30 +116,36 @@ func (m *Mesos) registerHost(s *registry.Service) {
 	}
 }
 
-func (m *Mesos) registerTask(t *Task, host string) {
+var ipSources = []string{ "docker", "mesos", "host" }
+
+func (m *Mesos) registerTask(t *state.Task, agent string) {
 	tname := cleanName(t.Name)
 
-	if t.Resources.Ports != "" {
-		for _, port := range yankPorts(t.Resources.Ports) {
+	address := t.IP("docker", "mesos", "host")
+
+	if t.Resources.PortRanges != "" {
+		for _, port := range t.Resources.Ports() {
 			m.Registry.Register(&registry.Service{
-				ID:      fmt.Sprintf("mesos-consul:%s:%s:%d", host, tname, port),
+				ID:      fmt.Sprintf("mesos-consul:%s:%s:%d", agent, tname, port),
 				Name:    tname,
-				Port:    port,
-				Address: toIP(host),
-				Check:   t.GetCheck(&CheckVar{
-					Host: toIP(host),
+				Port:    toPort(port),
+				Address: address,
+				Check:   GetCheck(t, &CheckVar{
+					Host: toIP(address),
 					Port: fmt.Sprintf("%d", port),
 				}),
+				Agent:   toIP(agent),
 			})
 		}
 	} else {
 		m.Registry.Register(&registry.Service{
-			ID:      fmt.Sprintf("mesos-consul:%s-%s", host, tname),
+			ID:      fmt.Sprintf("mesos-consul:%s-%s", agent, tname),
 			Name:    tname,
-			Address: toIP(host),
-			Check:   t.GetCheck(&CheckVar{
-				Host: toIP(host),
+			Address: address,
+			Check:   GetCheck(t, &CheckVar{
+				Host: toIP(address),
 			}),
+			Agent:   toIP(agent),
 		})
 	}
 }

@@ -6,14 +6,13 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/CiscoCloud/mesos-consul/config"
 	"github.com/CiscoCloud/mesos-consul/consul"
 	"github.com/CiscoCloud/mesos-consul/registry"
 
+	"github.com/mesosphere/mesos-dns/records/state"
 	consulapi "github.com/hashicorp/consul/api"
 )
 
@@ -25,6 +24,7 @@ type CacheEntry struct {
 type Mesos struct {
 	Registry registry.Registry
 	Masters  *[]MesosHost
+	Agents   map[string]string
 	Lock     sync.Mutex
 }
 
@@ -69,9 +69,9 @@ func (m *Mesos) Refresh() error {
 	return nil
 }
 
-func (m *Mesos) loadState() (StateJSON, error) {
+func (m *Mesos) loadState() (state.State, error) {
 	var err error
-	var sj StateJSON
+	var sj state.State
 
 	defer func() {
 		if rec := recover(); rec != nil {
@@ -97,7 +97,7 @@ func (m *Mesos) loadState() (StateJSON, error) {
 	return sj, err
 }
 
-func (m *Mesos) loadFromMaster(ip string, port string) (sj StateJSON) {
+func (m *Mesos) loadFromMaster(ip string, port string) (sj state.State) {
 	url := "http://" + ip + ":" + port + "/master/state.json"
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -123,7 +123,7 @@ func (m *Mesos) loadFromMaster(ip string, port string) (sj StateJSON) {
 	return sj
 }
 
-func (m *Mesos) parseState(sj StateJSON) {
+func (m *Mesos) parseState(sj state.State) {
 	log.Print("[INFO] Running parseState")
 
 	m.RegisterHosts(sj)
@@ -131,9 +131,9 @@ func (m *Mesos) parseState(sj StateJSON) {
 
 	for _, fw := range sj.Frameworks {
 		for _, task := range fw.Tasks {
-			host, err := sj.GetFollowerById(task.FollowerId)
-			if err == nil && task.State == "TASK_RUNNING" {
-				m.registerTask(&task, host)
+			agent, ok := m.Agents[task.SlaveID]
+			if ok && task.State == "TASK_RUNNING" {
+				m.registerTask(&task, agent)
 
 			}
 		}
@@ -141,24 +141,4 @@ func (m *Mesos) parseState(sj StateJSON) {
 
 	// Remove completed tasks
 	m.Registry.Deregister()
-}
-
-func yankPorts(ports string) []int {
-	rhs := strings.Split(ports, "[")[1]
-	lhs := strings.Split(rhs, "]")[0]
-
-	yports := []int{}
-
-	mports := strings.Split(lhs, ",")
-	for _, mport := range mports {
-		pz := strings.Split(strings.TrimSpace(mport), "-")
-		lo, _ := strconv.Atoi(pz[0])
-		hi, _ := strconv.Atoi(pz[1])
-
-		for t := lo; t <= hi; t++ {
-			yports = append(yports, t)
-		}
-	}
-
-	return yports
 }

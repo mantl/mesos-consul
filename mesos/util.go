@@ -44,13 +44,13 @@ func toIP(host string) string {
 	}
 
 	// Try to resolve host
-	ips, err := net.LookupIP(host)
+	i, err := net.ResolveIPAddr("ip4", host)
 	if err != nil {
 		// Return the hostname if unable to resolve
 		return host
 	}
 
-	return ips[0].String()
+	return i.String()
 }
 
 func toPort(p string) int {

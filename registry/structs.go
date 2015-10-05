@@ -14,6 +14,7 @@ type Service struct {
 	Address string
 	Tags    []string
 	Check   *Check
+	Agent   string
 }
 
 type Registry interface {
