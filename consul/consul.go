@@ -89,15 +89,23 @@ func (c *Consul) newAgent(address string) *consulapi.Client {
 }
 
 func (c *Consul) Register(service *registry.Service) error {
+	var address string
+
 	if _, ok := serviceCache[service.ID]; ok {
 		log.Printf("[DEBUG] Service found. Not registering: %s", service.ID)
 		serviceCache[service.ID].isRegistered = true
 		return nil
 	}
 
-	if _, ok := c.agents[service.Agent]; !ok {
+	if service.Agent != "" {
+		address = service.Agent
+	} else {
+		address = service.Address
+	}
+
+	if _, ok := c.agents[address]; !ok {
 		// Agent connection not saved. Connect.
-		c.agents[service.Agent] = c.newAgent(service.Agent)
+		c.agents[address] = c.newAgent(address)
 	}
 
 	log.Print("[INFO] Registering ", service.ID)
@@ -121,7 +129,7 @@ func (c *Consul) Register(service *registry.Service) error {
 		isRegistered: true,
 	}
 
-	return c.agents[service.Agent].Agent().ServiceRegister(s)
+	return c.agents[address].Agent().ServiceRegister(s)
 }
 
 // Deregister()
