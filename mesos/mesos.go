@@ -85,6 +85,7 @@ func (m *Mesos) loadState() (state.State, error) {
 
 	mh := m.getLeader()
 	if mh.Ip == "" {
+		log.Print("[WARN] No master in zookeeper")
 		return sj, errors.New("No master in zookeeper")
 	}
 

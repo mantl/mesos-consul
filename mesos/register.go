@@ -124,7 +124,7 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 	if t.Resources.PortRanges != "" {
 		for _, port := range t.Resources.Ports() {
 			m.Registry.Register(&registry.Service{
-				ID:      fmt.Sprintf("mesos-consul:%s:%s:%d", agent, tname, port),
+				ID:      fmt.Sprintf("mesos-consul:%s:%s:%s", agent, tname, port),
 				Name:    tname,
 				Port:    toPort(port),
 				Address: address,
