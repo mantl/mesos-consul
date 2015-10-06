@@ -18,7 +18,6 @@ type consulConfig struct {
 	token      string
 }
 
-// XXX -Rename to config after removing config import
 var config consulConfig
 
 func AddCmdFlags(f *flag.FlagSet) {

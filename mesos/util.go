@@ -1,17 +1,18 @@
 package mesos
 
 import (
-	"log"
 	"net"
 	"regexp"
 	"strconv"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func cleanName(name string) string {
 	reg, err := regexp.Compile("[^\\w-.\\.]")
 	if err != nil {
-		log.Print("[WARN] ", err)
+		log.Warn(err)
 		return name
 	}
 
@@ -47,7 +48,7 @@ func toIP(host string) string {
 func toPort(p string) int {
 	ps, err := strconv.Atoi(p)
 	if err != nil {
-		log.Printf("[ERROR] Invalid port number: %s", p)
+		log.Warnf("Invalid port number: %s", p)
 	}
 
 	return ps

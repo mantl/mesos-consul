@@ -2,11 +2,11 @@ package mesos
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/CiscoCloud/mesos-consul/registry"
 
 	"github.com/mesosphere/mesos-dns/records/state"
+	log "github.com/sirupsen/logrus"
 )
 
 // Query the consul agent on the Mesos Master
@@ -16,7 +16,7 @@ import (
 // with `mesos-consul:`
 //
 func (m *Mesos) LoadCache() error {
-	log.Print("[DEBUG] Populating cache from Consul")
+	log.Debug("Populating cache from Consul")
 
 	mh := m.getLeader()
 
@@ -24,7 +24,7 @@ func (m *Mesos) LoadCache() error {
 }
 
 func (m *Mesos) RegisterHosts(s state.State) {
-	log.Print("[INFO] Running RegisterHosts")
+	log.Debug("Running RegisterHosts")
 
 	m.Agents = make(map[string]string)
 
@@ -93,7 +93,7 @@ func sliceEq(a, b []string) bool {
 func (m *Mesos) registerHost(s *registry.Service) {
 	h := m.Registry.CacheLookup(s.ID)
 	if h != nil {
-		log.Printf("[INFO] Host found. Comparing tags: (%v, %v)", h.Tags, s.Tags)
+		log.Infof("Host found. Comparing tags: (%v, %v)", h.Tags, s.Tags)
 
 		if sliceEq(s.Tags, h.Tags) {
 			m.Registry.CacheMark(s.ID)
@@ -102,7 +102,7 @@ func (m *Mesos) registerHost(s *registry.Service) {
 			return
 		}
 
-		log.Println("[INFO] Tags changed. Re-registering")
+		log.Info("Tags changed. Re-registering")
 
 		// Delete cache entry. It will be re-created below
 		m.Registry.CacheDelete(s.ID)
@@ -110,7 +110,7 @@ func (m *Mesos) registerHost(s *registry.Service) {
 
 	err := m.Registry.Register(s)
 	if err != nil {
-		log.Print("[ERROR] ", err)
+		log.Warn(err)
 	}
 }
 
@@ -150,6 +150,6 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 	}
 
 	if err != nil {
-		log.Print("[WARN] ", err.Error())
+		log.Warn(err.Error())
 	}
 }

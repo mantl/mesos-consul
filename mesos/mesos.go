@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"sync"
 
@@ -15,6 +14,7 @@ import (
 	consulapi "github.com/hashicorp/consul/api"
 	proto "github.com/mesos/mesos-go/mesosproto"
 	"github.com/mesosphere/mesos-dns/records/state"
+	log "github.com/sirupsen/logrus"
 )
 
 type CacheEntry struct {
@@ -43,7 +43,7 @@ func New(c *config.Config) *Mesos {
 	}
 
 	if m.Registry == nil {
-		log.Fatal("[ERROR] No registry specified")
+		log.Fatal("No registry specified")
 	}
 
 	m.zkDetector(c.Zk)
@@ -54,7 +54,7 @@ func New(c *config.Config) *Mesos {
 func (m *Mesos) Refresh() error {
 	sj, err := m.loadState()
 	if err != nil {
-		log.Print("[WARN] loadState failed: ", err.Error())
+		log.Warn("loadState failed: ", err.Error())
 		return err
 	}
 
@@ -75,7 +75,7 @@ func (m *Mesos) loadState() (state.State, error) {
 	var err error
 	var sj state.State
 
-	log.Printf("[DEBUG] loadState() called")
+	log.Debug("loadState() called")
 
 	defer func() {
 		if rec := recover(); rec != nil {
@@ -85,17 +85,17 @@ func (m *Mesos) loadState() (state.State, error) {
 
 	mh := m.getLeader()
 	if mh.Ip == "" {
-		log.Print("[WARN] No master in zookeeper")
+		log.Warn("No master in zookeeper")
 		return sj, errors.New("No master in zookeeper")
 	}
 
-	log.Printf("[INFO] Zookeeper leader: %s:%s", mh.Ip, mh.PortString)
+	log.Infof("Zookeeper leader: %s:%s", mh.Ip, mh.PortString)
 
-	log.Print("[INFO] reloading from master ", mh.Ip)
+	log.Info("reloading from master ", mh.Ip)
 	sj = m.loadFromMaster(mh.Ip, mh.PortString)
 
 	if rip := leaderIP(sj.Leader); rip != mh.Ip {
-		log.Print("[WARN] master changed to ", rip)
+		log.Warn("master changed to ", rip)
 		sj = m.loadFromMaster(rip, mh.PortString)
 	}
 
@@ -111,28 +111,28 @@ func (m *Mesos) loadFromMaster(ip string, port string) (sj state.State) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal("[ERROR] ", err)
+		log.Fatal(err)
 	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal("[ERROR] ", err)
+		log.Fatal(err)
 	}
 
 	err = json.Unmarshal(body, &sj)
 	if err != nil {
-		log.Fatal("[ERROR] ", err)
+		log.Fatal(err)
 	}
 
 	return sj
 }
 
 func (m *Mesos) parseState(sj state.State) {
-	log.Print("[INFO] Running parseState")
+	log.Info("Running parseState")
 
 	m.RegisterHosts(sj)
-	log.Print("[DEBUG] Done running RegisterHosts")
+	log.Debug("Done running RegisterHosts")
 
 	for _, fw := range sj.Frameworks {
 		for _, task := range fw.Tasks {

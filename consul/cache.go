@@ -1,12 +1,12 @@
 package consul
 
 import (
-	"log"
 	"strings"
 
 	"github.com/CiscoCloud/mesos-consul/registry"
 
 	consulapi "github.com/hashicorp/consul/api"
+	log "github.com/sirupsen/logrus"
 )
 
 type cacheEntry struct {
@@ -46,7 +46,7 @@ func (c *Consul) CacheLoad(host string) error {
 
 		for _, s := range catalogServices {
 			if strings.HasPrefix(s.ServiceID, "mesos-consul:") {
-				log.Printf("[DEBUG] Found '%s' with ID '%s'", s.ServiceName, s.ServiceID)
+				log.Debugf("Found '%s' with ID '%s'", s.ServiceName, s.ServiceID)
 				serviceCache[s.ServiceID] = &cacheEntry{
 					service: &consulapi.AgentServiceRegistration{
 						ID:      s.ServiceID,

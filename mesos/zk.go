@@ -2,11 +2,11 @@ package mesos
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/mesos/mesos-go/detector"
 	_ "github.com/mesos/mesos-go/detector/zoo"
 	proto "github.com/mesos/mesos-go/mesosproto"
+	log "github.com/sirupsen/logrus"
 )
 
 func (m *Mesos) OnMasterChanged(leader *proto.MasterInfo) {
@@ -25,12 +25,12 @@ func (m *Mesos) UpdatedMasters(masters []*proto.MasterInfo) {
 
 func (m *Mesos) zkDetector(zkURI string) {
 	if zkURI == "" {
-		log.Fatal("[ERROR] Zookeeper address not provided")
+		log.Fatal("Zookeeper address not provided")
 	}
 
 	md, err := detector.New(zkURI)
 	if err != nil {
-		log.Fatal("[ERROR] ", err.Error())
+		log.Fatal(err.Error())
 	}
 
 	md.Detect(m)
