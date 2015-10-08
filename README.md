@@ -111,8 +111,44 @@ You can add options to authenticate via basic http or Consul token.
 
 Tasks are registered as `task_name.service.consul`
 
-## Todo
+#### Tags
 
-  * Add support for tags
+Tags can be added to consul by using labels in Mesos. If you are using Marathon you can add a label called `tags` to your service definition with a  comma-separated list of strings that will be registered in consul as tags.
+
+For example, in your marathon service definition: 
+
+```
+{
+  "id": "tagging-test",
+  "container": { /*...*/},
+  "labels": {
+    "tags": "label1,label2,label3"
+  }
+}
+```
+
+This will result in a service `tagging-test` being created in consul with 3 separate tags: `label1` `label2` and `label3`
+
+```
+// GET /v1/catalog/service/tagging-test
+[
+  {
+    Node: "consul",
+    Address: "10.0.2.15",
+    ServiceID: "mesos-consul:10.0.2.15:tagging-test:31562",
+    ServiceName: "tagging-test5",
+    ServiceTags: [
+      "label1",
+      "label2",
+      "label3"
+    ],
+    ServiceAddress: "10.0.2.15",
+    ServicePort: 31562
+  }
+]
+```
+
+
+## Todo
   * Use task labels for metadata
   * Support for multiple port tasks

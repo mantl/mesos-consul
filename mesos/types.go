@@ -12,6 +12,11 @@ type Resources struct {
 	Ports		string	`json:"ports"`
 }
 
+type Labels []struct {
+	Key string `json:"key"`
+	Value string `json:value`
+}
+
 type Tasks []struct {
 	FrameworkId	string	`json:"framework_id"`
 	Id		string	`json:"id"`
@@ -19,6 +24,7 @@ type Tasks []struct {
 	FollowerId	string	`json:"slave_id"`
 	State		string	`json:"state"`
 	Resources		`json:"resources"`
+	Labels `json:"labels"`
 }
 
 type Frameworks []struct {

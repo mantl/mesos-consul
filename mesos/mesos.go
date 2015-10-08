@@ -130,12 +130,21 @@ func (m *Mesos) parseState(sj StateJSON) {
 			host, err := sj.Followers.hostById(task.FollowerId)
 			if err == nil && task.State == "TASK_RUNNING" {
 				tname := cleanName(task.Name)
+
+				tags := make([]string, 0)
+				for _, label := range task.Labels {
+					if label.Key == "tags" {
+						tags = strings.Split(label.Value, ",")
+					}
+				}
+
 				if task.Resources.Ports != "" {
 					for _, port := range yankPorts(task.Resources.Ports) {
 						m.register(&consulapi.AgentServiceRegistration{
 							ID:      fmt.Sprintf("mesos-consul:%s:%s:%d", host, tname, port),
 							Name:    tname,
 							Port:    port,
+							Tags:    tags,
 							Address: toIP(host),
 						})
 					}
@@ -143,6 +152,7 @@ func (m *Mesos) parseState(sj StateJSON) {
 					m.register(&consulapi.AgentServiceRegistration{
 						ID:      fmt.Sprintf("mesos-consul:%s-%s", host, tname),
 						Name:    tname,
+						Tags:    tags,
 						Address: toIP(host),
 					})
 				}
