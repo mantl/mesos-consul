@@ -11,6 +11,7 @@ import (
 
 type cacheEntry struct {
 	service      *consulapi.AgentServiceRegistration
+	agent        string
 	isRegistered bool
 }
 
@@ -48,6 +49,7 @@ func (c *Consul) CacheLoad(host string) error {
 			if strings.HasPrefix(s.ServiceID, "mesos-consul:") {
 				log.Debugf("Found '%s' with ID '%s'", s.ServiceName, s.ServiceID)
 				serviceCache[s.ServiceID] = &cacheEntry{
+					agent: s.Address,
 					service: &consulapi.AgentServiceRegistration{
 						ID:      s.ServiceID,
 						Name:    s.ServiceName,

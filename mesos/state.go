@@ -5,8 +5,7 @@ import (
 	"strings"
 
 	"github.com/CiscoCloud/mesos-consul/registry"
-
-	"github.com/mesosphere/mesos-dns/records/state"
+	"github.com/CiscoCloud/mesos-consul/state"
 )
 
 type CheckVar struct {

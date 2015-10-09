@@ -89,23 +89,15 @@ func (c *Consul) newAgent(address string) *consulapi.Client {
 }
 
 func (c *Consul) Register(service *registry.Service) error {
-	var address string
-
 	if _, ok := serviceCache[service.ID]; ok {
 		log.Debugf("Service found. Not registering: %s", service.ID)
 		serviceCache[service.ID].isRegistered = true
 		return nil
 	}
 
-	if service.Agent != "" {
-		address = service.Agent
-	} else {
-		address = service.Address
-	}
-
-	if _, ok := c.agents[address]; !ok {
+	if _, ok := c.agents[service.Agent]; !ok {
 		// Agent connection not saved. Connect.
-		c.agents[address] = c.newAgent(address)
+		c.agents[service.Agent] = c.newAgent(service.Agent)
 	}
 
 	log.Info("Registering ", service.ID)
@@ -115,7 +107,6 @@ func (c *Consul) Register(service *registry.Service) error {
 		Name:    service.Name,
 		Port:    service.Port,
 		Address: service.Address,
-		Tags:    service.Tags,
 		Check: &consulapi.AgentServiceCheck{
 			TTL:      service.Check.TTL,
 			Script:   service.Check.Script,
@@ -124,12 +115,17 @@ func (c *Consul) Register(service *registry.Service) error {
 		},
 	}
 
+	if len(service.Tags) > 0 {
+		s.Tags = service.Tags
+	}
+
 	serviceCache[s.ID] = &cacheEntry{
+		agent:        service.Agent,
 		service:      s,
 		isRegistered: true,
 	}
 
-	return c.agents[address].Agent().ServiceRegister(s)
+	return c.agents[service.Agent].Agent().ServiceRegister(s)
 }
 
 // Deregister()
@@ -139,7 +135,7 @@ func (c *Consul) Deregister() error {
 	for s, b := range serviceCache {
 		if !b.isRegistered {
 			log.Infof("Deregistering %s", s)
-			err := c.deregister(b.service)
+			err := c.deregister(b.agent, b.service)
 			if err != nil {
 				return err
 			}
@@ -152,13 +148,11 @@ func (c *Consul) Deregister() error {
 	return nil
 }
 
-func (c *Consul) deregister(service *consulapi.AgentServiceRegistration) error {
-	if _, ok := c.agents[service.Address]; !ok {
-		log.Warn("Deregistering a service without an agent connection?!")
-
+func (c *Consul) deregister(agent string, service *consulapi.AgentServiceRegistration) error {
+	if _, ok := c.agents[agent]; !ok {
 		// Agent connection not saved. Connect.
-		c.agents[service.Address] = c.newAgent(service.Address)
+		c.agents[agent] = c.newAgent(agent)
 	}
 
-	return c.agents[service.Address].Agent().ServiceDeregister(service.ID)
+	return c.agents[agent].Agent().ServiceDeregister(service.ID)
 }

@@ -2,10 +2,11 @@ package mesos
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/CiscoCloud/mesos-consul/registry"
+	"github.com/CiscoCloud/mesos-consul/state"
 
-	"github.com/mesosphere/mesos-dns/records/state"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -40,7 +41,8 @@ func (m *Mesos) RegisterHosts(s state.State) {
 			Name:    "mesos",
 			Port:    port,
 			Address: agent,
-			Tags:    []string{"follower"},
+			Agent:   agent,
+			Tags:    []string{"agent"},
 			Check: &registry.Check{
 				HTTP:     fmt.Sprintf("http://%s:%d/slave(1)/health", agent, port),
 				Interval: "10s",
@@ -63,6 +65,7 @@ func (m *Mesos) RegisterHosts(s state.State) {
 			Name:    "mesos",
 			Port:    ma.Port,
 			Address: ma.Ip,
+			Agent:   ma.Ip,
 			Tags:    tags,
 			Check: &registry.Check{
 				HTTP:     fmt.Sprintf("http://%s:%d/master/health", ma.Ip, ma.Port),
@@ -118,10 +121,18 @@ var ipSources = []string{"docker", "mesos", "host"}
 
 func (m *Mesos) registerTask(t *state.Task, agent string) {
 	var err error
+	var tags []string
 
 	tname := cleanName(t.Name)
 
 	address := t.IP("docker", "mesos", "host")
+
+	l := t.Label("tags")
+	if l != "" {
+		tags = strings.Split(t.Label("tags"), ",")
+	} else {
+		tags = []string{}
+	}
 
 	if t.Resources.PortRanges != "" {
 		for _, port := range t.Resources.Ports() {
@@ -130,6 +141,7 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 				Name:    tname,
 				Port:    toPort(port),
 				Address: address,
+				Tags:    tags,
 				Check: GetCheck(t, &CheckVar{
 					Host: toIP(address),
 					Port: port,
@@ -142,6 +154,7 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 			ID:      fmt.Sprintf("mesos-consul:%s-%s", agent, tname),
 			Name:    tname,
 			Address: address,
+			Tags:    tags,
 			Check: GetCheck(t, &CheckVar{
 				Host: toIP(address),
 			}),
