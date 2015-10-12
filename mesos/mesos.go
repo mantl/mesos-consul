@@ -3,18 +3,18 @@ package mesos
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
-	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/CiscoCloud/mesos-consul/config"
 	"github.com/CiscoCloud/mesos-consul/consul"
+	"github.com/CiscoCloud/mesos-consul/registry"
+	"github.com/CiscoCloud/mesos-consul/state"
 
 	consulapi "github.com/hashicorp/consul/api"
+	proto "github.com/mesos/mesos-go/mesosproto"
+	log "github.com/sirupsen/logrus"
 )
 
 type CacheEntry struct {
@@ -23,20 +23,30 @@ type CacheEntry struct {
 }
 
 type Mesos struct {
-	Consul       *consul.Consul
-	Masters      *[]MesosHost
-	Lock         sync.Mutex
-	ServiceCache map[string]*CacheEntry
+	Registry registry.Registry
+	Agents   map[string]string
+	Lock     sync.Mutex
+
+	Leader  *proto.MasterInfo
+	Masters []*proto.MasterInfo
+	started sync.Once
+	startChan chan struct{}
 }
 
-func New(c *config.Config, consul *consul.Consul) *Mesos {
+func New(c *config.Config) *Mesos {
 	m := new(Mesos)
 
 	if c.Zk == "" {
 		return nil
 	}
 
-	m.Consul = consul
+	if consul.IsEnabled() {
+		m.Registry = consul.New()
+	}
+
+	if m.Registry == nil {
+		log.Fatal("No registry specified")
+	}
 
 	m.zkDetector(c.Zk)
 
@@ -46,7 +56,7 @@ func New(c *config.Config, consul *consul.Consul) *Mesos {
 func (m *Mesos) Refresh() error {
 	sj, err := m.loadState()
 	if err != nil {
-		log.Print("[ERROR] No master")
+		log.Warn("loadState failed: ", err.Error())
 		return err
 	}
 
@@ -54,9 +64,7 @@ func (m *Mesos) Refresh() error {
 		return errors.New("Empty master")
 	}
 
-	if m.ServiceCache == nil {
-		log.Print("[INFO] Creating ServiceCache")
-		m.ServiceCache = make(map[string]*CacheEntry)
+	if m.Registry.CacheCreate() {
 		m.LoadCache()
 	}
 
@@ -65,9 +73,11 @@ func (m *Mesos) Refresh() error {
 	return nil
 }
 
-func (m *Mesos) loadState() (StateJSON, error) {
+func (m *Mesos) loadState() (state.State, error) {
 	var err error
-	var sj StateJSON
+	var sj state.State
+
+	log.Debug("loadState() called")
 
 	defer func() {
 		if rec := recover(); rec != nil {
@@ -75,25 +85,26 @@ func (m *Mesos) loadState() (StateJSON, error) {
 		}
 	}()
 
-	ip, port := m.getLeader()
-	if ip == "" {
+	mh := m.getLeader()
+	if mh.Ip == "" {
+		log.Warn("No master in zookeeper")
 		return sj, errors.New("No master in zookeeper")
 	}
 
-	log.Printf("[INFO] Zookeeper leader: %s:%s", ip, port)
+	log.Infof("Zookeeper leader: %s:%s", mh.Ip, mh.PortString)
 
-	log.Print("[INFO] reloading from master ", ip)
-	sj = m.loadFromMaster(ip, port)
+	log.Info("reloading from master ", mh.Ip)
+	sj = m.loadFromMaster(mh.Ip, mh.PortString)
 
-	if rip := leaderIP(sj.Leader); rip != ip {
-		log.Print("[WARN] master changed to ", rip)
-		sj = m.loadFromMaster(rip, port)
+	if rip := leaderIP(sj.Leader); rip != mh.Ip {
+		log.Warn("master changed to ", rip)
+		sj = m.loadFromMaster(rip, mh.PortString)
 	}
 
 	return sj, err
 }
 
-func (m *Mesos) loadFromMaster(ip string, port string) (sj StateJSON) {
+func (m *Mesos) loadFromMaster(ip string, port string) (sj state.State) {
 	url := "http://" + ip + ":" + port + "/master/state.json"
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -102,31 +113,32 @@ func (m *Mesos) loadFromMaster(ip string, port string) (sj StateJSON) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal("[ERROR] ", err)
+		log.Fatal(err)
 	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal("[ERROR] ", err)
+		log.Fatal(err)
 	}
 
 	err = json.Unmarshal(body, &sj)
 	if err != nil {
-		log.Fatal("[ERROR] ", err)
+		log.Fatal(err)
 	}
 
 	return sj
 }
 
-func (m *Mesos) parseState(sj StateJSON) {
-	log.Print("[INFO] Running parseState")
+func (m *Mesos) parseState(sj state.State) {
+	log.Info("Running parseState")
 
 	m.RegisterHosts(sj)
-	log.Print("[DEBUG] Done running RegisterHosts")
+	log.Debug("Done running RegisterHosts")
 
 	for _, fw := range sj.Frameworks {
 		for _, task := range fw.Tasks {
+<<<<<<< HEAD
 			host, err := sj.Followers.hostById(task.FollowerId)
 			if err == nil && task.State == "TASK_RUNNING" {
 				tname := cleanName(task.Name)
@@ -146,11 +158,18 @@ func (m *Mesos) parseState(sj StateJSON) {
 						Address: toIP(host),
 					})
 				}
+=======
+			agent, ok := m.Agents[task.SlaveID]
+			if ok && task.State == "TASK_RUNNING" {
+				m.registerTask(&task, agent)
+
+>>>>>>> 0.3
 			}
 		}
 	}
 
 	// Remove completed tasks
+<<<<<<< HEAD
 	m.deregister()
 }
 
@@ -172,4 +191,7 @@ func yankPorts(ports string) []int {
 	}
 
 	return yports
+=======
+	m.Registry.Deregister()
+>>>>>>> 0.3
 }
