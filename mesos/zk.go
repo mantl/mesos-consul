@@ -2,6 +2,7 @@ package mesos
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/mesos/mesos-go/detector"
 	_ "github.com/mesos/mesos-go/detector/zoo"
@@ -12,6 +13,8 @@ import (
 func (m *Mesos) OnMasterChanged(leader *proto.MasterInfo) {
 	m.Lock.Lock()
 	defer m.Lock.Unlock()
+
+	m.started.Do(func () { close(m.startChan) })
 
 	m.Leader = leader
 }
@@ -33,7 +36,15 @@ func (m *Mesos) zkDetector(zkURI string) {
 		log.Fatal(err.Error())
 	}
 
+	m.startChan = make(chan struct{})
 	md.Detect(m)
+
+	select {
+	case <-m.startChan:
+		log.Info("Done waiting for initial leader information from Zookeeper.")
+	case <-time.After(2 * time.Minute):
+		log.Fatal("Timed out waiting for initial ZK detection.")
+	}
 }
 
 // Get the leader out of the list of masters

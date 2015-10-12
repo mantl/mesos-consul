@@ -29,6 +29,8 @@ type Mesos struct {
 
 	Leader  *proto.MasterInfo
 	Masters []*proto.MasterInfo
+	started sync.Once
+	startChan chan struct{}
 }
 
 func New(c *config.Config) *Mesos {
