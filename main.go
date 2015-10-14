@@ -71,10 +71,10 @@ func parseFlags(args []string) (*config.Config, error) {
 		os.Exit(0)
 	}
 
-	l, err := log.ParseLevel(c.LogLevel)
+	l, err := log.ParseLevel(strings.ToLower(c.LogLevel))
 	if err != nil {
 		log.SetLevel(log.WarnLevel)
-		log.Warnf("Invalid log level '%v'. Setting to WARN")
+		log.Warnf("Invalid log level '%v'. Setting to WARN", c.LogLevel)
 	} else {
 		log.SetLevel(l)
 	}
