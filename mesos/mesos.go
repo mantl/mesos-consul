@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/CiscoCloud/mesos-consul/config"
@@ -31,6 +32,8 @@ type Mesos struct {
 	Masters []*proto.MasterInfo
 	started sync.Once
 	startChan chan struct{}
+
+	IpOrder []string
 }
 
 func New(c *config.Config) *Mesos {
@@ -47,6 +50,14 @@ func New(c *config.Config) *Mesos {
 	}
 
 	m.zkDetector(c.Zk)
+	m.IpOrder = strings.Split(c.MesosIpOrder, ",")
+	for _, src := range m.IpOrder {
+		switch src {
+		case "netinfo", "host", "docker", "mesos":
+		default:
+			log.Fatalf("Invalid IP Search Order: '%v'", src)
+		}
+	}
 
 	return m
 }

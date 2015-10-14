@@ -88,11 +88,11 @@ func (c *Consul) newAgent(address string) *consulapi.Client {
 	return client
 }
 
-func (c *Consul) Register(service *registry.Service) error {
+func (c *Consul) Register(service *registry.Service) {
 	if _, ok := serviceCache[service.ID]; ok {
 		log.Debugf("Service found. Not registering: %s", service.ID)
 		serviceCache[service.ID].isRegistered = true
-		return nil
+		return 
 	}
 
 	if _, ok := c.agents[service.Agent]; !ok {
@@ -119,13 +119,17 @@ func (c *Consul) Register(service *registry.Service) error {
 		s.Tags = service.Tags
 	}
 
+	err := c.agents[service.Agent].Agent().ServiceRegister(s)
+	if err != nil {
+		log.Warnf("Unable to register %s: %s", s.ID, err.Error())
+		return
+	}
+
 	serviceCache[s.ID] = &cacheEntry{
 		agent:        service.Agent,
 		service:      s,
 		isRegistered: true,
 	}
-
-	return c.agents[service.Agent].Agent().ServiceRegister(s)
 }
 
 // Deregister()

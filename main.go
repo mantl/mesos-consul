@@ -46,6 +46,7 @@ func parseFlags(args []string) (*config.Config, error) {
 	flags.StringVar(&c.LogLevel, "log-level", "WARN", "")
 	flags.DurationVar(&c.Refresh, "refresh", time.Minute, "")
 	flags.StringVar(&c.Zk, "zk", "zk://127.0.0.1:2181/mesos", "")
+	flags.StringVar(&c.MesosIpOrder, "mesos-ip-order", "netinfo,mesos,host", "")
 
 	consul.AddCmdFlags(flags)
 
@@ -86,6 +87,11 @@ Options:
 				(default 1m)
   --zk=<address>		Zookeeper path to Mesos
 				(default zk://127.0.0.1:2181/mesos)
+  --mesos-ip-order=		Comma separated list to control the order in
+				which mesos-consul searches for the task IP
+				address. Valid options are 'netinfo', 'mesos',
+				'docker' and 'host'
+				(default netinfo,mesos,host)
 ` + consul.Help()
 
 	return strings.TrimSpace(helpText)

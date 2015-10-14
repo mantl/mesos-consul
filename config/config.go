@@ -5,14 +5,16 @@ import (
 )
 
 type Config struct {
-	Refresh       time.Duration
-	Zk            string
-	LogLevel      string
+	Refresh      time.Duration
+	Zk           string
+	LogLevel     string
+	MesosIpOrder string
 }
 
 func DefaultConfig() *Config {
 	return &Config{
-		Refresh: time.Minute,
-		Zk:            "zk://127.0.0.1:2181/mesos",
+		Refresh:      time.Minute,
+		Zk:           "zk://127.0.0.1:2181/mesos",
+		MesosIpOrder: "netinfo,mesos,host",
 	}
 }

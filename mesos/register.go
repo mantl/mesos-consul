@@ -111,21 +111,15 @@ func (m *Mesos) registerHost(s *registry.Service) {
 		m.Registry.CacheDelete(s.ID)
 	}
 
-	err := m.Registry.Register(s)
-	if err != nil {
-		log.Warn(err)
-	}
+	m.Registry.Register(s)
 }
 
-var ipSources = []string{"docker", "mesos", "host"}
-
 func (m *Mesos) registerTask(t *state.Task, agent string) {
-	var err error
 	var tags []string
 
 	tname := cleanName(t.Name)
 
-	address := t.IP("docker", "mesos", "host")
+	address := t.IP(m.IpOrder...)
 
 	l := t.Label("tags")
 	if l != "" {
@@ -136,7 +130,7 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 
 	if t.Resources.PortRanges != "" {
 		for _, port := range t.Resources.Ports() {
-			err = m.Registry.Register(&registry.Service{
+			m.Registry.Register(&registry.Service{
 				ID:      fmt.Sprintf("mesos-consul:%s:%s:%s", agent, tname, port),
 				Name:    tname,
 				Port:    toPort(port),
@@ -150,7 +144,7 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 			})
 		}
 	} else {
-		err = m.Registry.Register(&registry.Service{
+		m.Registry.Register(&registry.Service{
 			ID:      fmt.Sprintf("mesos-consul:%s-%s", agent, tname),
 			Name:    tname,
 			Address: address,
@@ -160,9 +154,5 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 			}),
 			Agent: toIP(agent),
 		})
-	}
-
-	if err != nil {
-		log.Warn(err.Error())
 	}
 }

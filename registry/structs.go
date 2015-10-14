@@ -24,7 +24,7 @@ type Registry interface {
 	CacheLookup(string) *Service
 	CacheMark(string)
 
-	Register(*Service) error
+	Register(*Service) 
 	Deregister() error
 }
 
