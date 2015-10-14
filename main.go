@@ -23,7 +23,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Info("Using registry port: ", c.RegistryPort)
 	log.Info("Using zookeeper: ", c.Zk)
 	leader := mesos.New(c)
 
@@ -46,13 +45,6 @@ func parseFlags(args []string) (*config.Config, error) {
 	flags.BoolVar(&doHelp, "help", false, "")
 	flags.StringVar(&c.LogLevel, "log-level", "WARN", "")
 	flags.DurationVar(&c.Refresh, "refresh", time.Minute, "")
-	flags.StringVar(&c.RegistryPort, "registry-port", "8500", "")
-	flags.Var((*config.AuthVar)(c.RegistryAuth), "registry-auth", "")
-	flags.BoolVar(&c.RegistrySSL.Enabled, "registry-ssl", c.RegistrySSL.Enabled, "")
-	flags.BoolVar(&c.RegistrySSL.Verify, "registry-ssl-verify", c.RegistrySSL.Verify, "")
-	flags.StringVar(&c.RegistrySSL.Cert, "registry-ssl-cert", c.RegistrySSL.Cert, "")
-	flags.StringVar(&c.RegistrySSL.CaCert, "registry-ssl-cacert", c.RegistrySSL.CaCert, "")
-	flags.StringVar(&c.RegistryToken, "registry-token", c.RegistryToken, "")
 	flags.StringVar(&c.Zk, "zk", "zk://127.0.0.1:2181/mesos", "")
 
 	consul.AddCmdFlags(flags)
@@ -92,16 +84,6 @@ Options:
 				(default "WARN")
   --refresh=<time>		Set the Mesos refresh rate
 				(default 1m)
-  --registry-auth=<user[:pass]>	Set the basic authentication username
-				(and password)
-  --registry-port=<port>	Port to connect to consul agents
-				(default 8500)
-  --registry-ssl		Use SSL when connecting to the registry
-  --registry-ssl-verify		Verify certificates when connecting via SSL
-  --registry-ssl-cert		SSL certificates to send to registry
-  --registry-ssl-cacert		Validate server certificate against this CA
-				certificate file list
-  --registry-token=<token>	Set registry ACL token
   --zk=<address>		Zookeeper path to Mesos
 				(default zk://127.0.0.1:2181/mesos)
 ` + consul.Help()

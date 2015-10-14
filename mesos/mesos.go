@@ -40,9 +40,7 @@ func New(c *config.Config) *Mesos {
 		return nil
 	}
 
-	if consul.IsEnabled() {
-		m.Registry = consul.New()
-	}
+	m.Registry = consul.New()
 
 	if m.Registry == nil {
 		log.Fatal("No registry specified")

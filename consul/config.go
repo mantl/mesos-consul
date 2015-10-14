@@ -60,10 +60,6 @@ Consul Options:
 	return helpText
 }
 
-func IsEnabled() bool {
-	return config.enabled
-}
-
 type auth struct {
 	Enabled  bool
 	Username string
