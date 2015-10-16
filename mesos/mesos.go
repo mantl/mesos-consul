@@ -50,6 +50,7 @@ func New(c *config.Config) *Mesos {
 	}
 
 	m.zkDetector(c.Zk)
+
 	m.IpOrder = strings.Split(c.MesosIpOrder, ",")
 	for _, src := range m.IpOrder {
 		switch src {
@@ -58,6 +59,7 @@ func New(c *config.Config) *Mesos {
 			log.Fatalf("Invalid IP Search Order: '%v'", src)
 		}
 	}
+	log.Debugf("m.IpOrder = '%v'", m.IpOrder)
 
 	return m
 }
@@ -149,6 +151,7 @@ func (m *Mesos) parseState(sj state.State) {
 		for _, task := range fw.Tasks {
 			agent, ok := m.Agents[task.SlaveID]
 			if ok && task.State == "TASK_RUNNING" {
+				task.SlaveIP = agent
 				m.registerTask(&task, agent)
 			}
 		}
