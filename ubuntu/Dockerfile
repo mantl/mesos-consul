@@ -18,4 +18,4 @@ RUN apt-get update -y \
 	&& apt-get autoremove -y \
 	&& rm -rf /var/lib/{apt,dpkg,cache,log}/
 
-ENTRYPOINT [ "/bin/mesos/consul" ]
+ENTRYPOINT [ "/bin/mesos-consul" ]
