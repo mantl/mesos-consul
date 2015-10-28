@@ -1,7 +1,9 @@
 package mesos
 
 import (
+	"encoding/binary"
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/mesos/mesos-go/detector"
@@ -31,6 +33,7 @@ func (m *Mesos) zkDetector(zkURI string) {
 		log.Fatal("Zookeeper address not provided")
 	}
 
+	log.WithField("zk", zkURI).Debug("Zookeeper address")
 	md, err := detector.New(zkURI)
 	if err != nil {
 		log.Fatal(err.Error())
@@ -84,12 +87,67 @@ func MasterInfoToMesosHost(mi *proto.MasterInfo) *MesosHost {
 		}
 	}
 
+	addr := mi.GetAddress()
+	if addr.GetHostname() != "" {
+		return &MesosHost{
+			Host:         addr.GetHostname(),
+			Ip:           addr.GetIp(),
+			Port:         int(addr.GetPort()),
+			PortString:   fmt.Sprintf("%d", addr.GetPort()),
+			IsLeader:     false,
+			IsRegistered: false,
+		}
+	} else {
+		log.Debug("Using old protobuf format")
+		// Old protobuf format
+		return ProtoBufToMesosHost(mi)
+	}
+}
+
+func ProtoBufToMesosHost(mi *proto.MasterInfo) *MesosHost {
+	ipstring := ""
+	port := ""
+
+	log.WithField("mi.GetHostname()", mi.GetHostname()).Debug("protobuf MasterInfo")
+	log.WithField("mi.GetIp()", packedIpToString(mi.GetIp())).Debug("protobuf MasterInfo")
+	log.WithField("mi.GetPort()", fmt.Sprint(mi.GetPort())).Debug("protobuf MasterInfo")
+
+	if host := mi.GetHostname(); host != "" {
+		if ip, err := net.LookupIP(host); err == nil {
+			for _,i := range(ip) {
+				if four := i.To4(); four != nil {
+					ipstring = i.String()
+					break
+				}
+			}
+		}
+	}
+
+	if ipstring == "" {
+		ipstring = packedIpToString(mi.GetIp())
+	}
+
+	if ipstring == "" {
+		ipstring = mi.GetHostname()
+	}
+
+	if len(ipstring) > 0 {
+		port = fmt.Sprint(mi.GetPort())
+	}
+
 	return &MesosHost{
-		Host:         *mi.Address.Hostname,
-		Ip:           *mi.Address.Ip,
-		Port:         int(*mi.Address.Port),
-		PortString:   fmt.Sprintf("%d", *mi.Address.Port),
+		Host:         mi.GetHostname(),
+		Ip:           ipstring,
+		Port:         int(mi.GetPort()),
+		PortString:   port,
 		IsLeader:     false,
 		IsRegistered: false,
 	}
+}
+
+func packedIpToString(p uint32) string {
+	octets := make([]byte, 4, 4)
+	binary.LittleEndian.PutUint32(octets, p)
+	ipv4 := net.IP(octets)
+	return ipv4.String()
 }
