@@ -42,7 +42,7 @@ func (m *Mesos) RegisterHosts(s state.State) {
 			Port:    port,
 			Address: agent,
 			Agent:   agent,
-			Tags:    []string{"agent"},
+			Tags:    []string{"agent", "follower" },
 			Check: &registry.Check{
 				HTTP:     fmt.Sprintf("http://%s:%d/slave(1)/health", agent, port),
 				Interval: "10s",
