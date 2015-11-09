@@ -88,12 +88,12 @@ You can add options to authenticate via basic http or Consul token.
 |         Option        | Description |
 |-----------------------|-------------|
 | `refresh`             | Time between refreshes of Mesos tasks
-| `registry-auth`       | The basic authentication username (and optional password), separated by a colon.
-| `registry-ssl`        | Use HTTPS while talking to the registry.
-| `registry-ssl-verify` | Verify certificates when connecting via SSL.
-| `registry-ssl-cert`   | Path to an SSL certificate to use to authenticate to the registry server
-| `registry-ssl-cacert` | Path to a CA certificate file, containing one or more CA certificates to use to valid the reigstry server certificate
-| `registry-token`      | The registry ACL token
+| `consul-auth`       | The basic authentication username (and optional password), separated by a colon.
+| `consul-ssl`        | Use HTTPS while talking to the registry.
+| `consul-ssl-verify` | Verify certificates when connecting via SSL.
+| `consul-ssl-cert`   | Path to an SSL certificate to use to authenticate to the registry server
+| `consul-ssl-cacert` | Path to a CA certificate file, containing one or more CA certificates to use to valid the reigstry server certificate
+| `consul-token`      | The registry ACL token
 | `zk`*                 | Location of the Mesos path in Zookeeper. The default value is zk://127.0.0.1:2181/mesos
 
 
