@@ -3,7 +3,7 @@ package mesos
 import (
 	"fmt"
 	"strings"
-
+	"strconv"
 	"github.com/CiscoCloud/mesos-consul/registry"
 	"github.com/CiscoCloud/mesos-consul/state"
 
@@ -126,6 +126,29 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 		tags = strings.Split(t.Label("tags"), ",")
 	} else {
 		tags = []string{}
+	}
+
+	for key := range t.DiscoveryInfo.Ports.DiscoveryPorts {
+		discoveryPort := state.DiscoveryPort( t.DiscoveryInfo.Ports.DiscoveryPorts[key])
+		serviceName := discoveryPort.Name
+		servicePort := strconv.Itoa(discoveryPort.Number)
+		log.Debugf("%+v framework has %+v as a name for %+v port",
+			t.Name,
+			discoveryPort.Name,
+			discoveryPort.Number)
+		if discoveryPort.Name != ""{
+			m.Registry.Register(&registry.Service{
+				ID:      fmt.Sprintf("mesos-consul:%s:%s:%s", agent, tname, discoveryPort.Number),
+				Name:    tname,
+				Port:    toPort(servicePort),
+				Address: address,
+				Tags:    []string{serviceName},
+				Check: GetCheck(t, &CheckVar{
+					Host: toIP(address),
+					Port: servicePort,
+				}),
+				Agent: toIP(agent),
+			})}
 	}
 
 	if t.Resources.PortRanges != "" {
