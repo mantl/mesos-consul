@@ -28,9 +28,9 @@ type Mesos struct {
 	Agents   map[string]string
 	Lock     sync.Mutex
 
-	Leader  *proto.MasterInfo
-	Masters []*proto.MasterInfo
-	started sync.Once
+	Leader    *proto.MasterInfo
+	Masters   []*proto.MasterInfo
+	started   sync.Once
 	startChan chan struct{}
 
 	IpOrder []string

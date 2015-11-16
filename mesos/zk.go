@@ -16,7 +16,7 @@ func (m *Mesos) OnMasterChanged(leader *proto.MasterInfo) {
 	m.Lock.Lock()
 	defer m.Lock.Unlock()
 
-	m.started.Do(func () { close(m.startChan) })
+	m.started.Do(func() { close(m.startChan) })
 
 	m.Leader = leader
 }
@@ -114,7 +114,7 @@ func ProtoBufToMesosHost(mi *proto.MasterInfo) *MesosHost {
 
 	if host := mi.GetHostname(); host != "" {
 		if ip, err := net.LookupIP(host); err == nil {
-			for _,i := range(ip) {
+			for _, i := range ip {
 				if four := i.To4(); four != nil {
 					ipstring = i.String()
 					break
