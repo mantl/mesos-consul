@@ -2,10 +2,10 @@ package mesos
 
 import (
 	"fmt"
-	"strings"
-	"strconv"
 	"github.com/CiscoCloud/mesos-consul/registry"
 	"github.com/CiscoCloud/mesos-consul/state"
+	"strconv"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -42,7 +42,7 @@ func (m *Mesos) RegisterHosts(s state.State) {
 			Port:    port,
 			Address: agent,
 			Agent:   agent,
-			Tags:    []string{"agent", "follower" },
+			Tags:    []string{"agent", "follower"},
 			Check: &registry.Check{
 				HTTP:     fmt.Sprintf("http://%s:%d/slave(1)/health", agent, port),
 				Interval: "10s",
@@ -129,16 +129,16 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 	}
 
 	for key := range t.DiscoveryInfo.Ports.DiscoveryPorts {
-		discoveryPort := state.DiscoveryPort( t.DiscoveryInfo.Ports.DiscoveryPorts[key])
+		discoveryPort := state.DiscoveryPort(t.DiscoveryInfo.Ports.DiscoveryPorts[key])
 		serviceName := discoveryPort.Name
 		servicePort := strconv.Itoa(discoveryPort.Number)
 		log.Debugf("%+v framework has %+v as a name for %+v port",
 			t.Name,
 			discoveryPort.Name,
 			discoveryPort.Number)
-		if discoveryPort.Name != ""{
+		if discoveryPort.Name != "" {
 			m.Registry.Register(&registry.Service{
-				ID:      fmt.Sprintf("mesos-consul:%s:%s:%s", agent, tname, discoveryPort.Number),
+				ID:      fmt.Sprintf("mesos-consul:%s:%s:%d", agent, tname, discoveryPort.Number),
 				Name:    tname,
 				Port:    toPort(servicePort),
 				Address: address,
@@ -148,7 +148,8 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 					Port: servicePort,
 				}),
 				Agent: toIP(agent),
-			})}
+			})
+		}
 	}
 
 	if t.Resources.PortRanges != "" {
