@@ -1,6 +1,6 @@
 # mesos-consul
 
-Mesos to Consul bridge for service discovery. 
+Mesos to Consul bridge for service discovery.
 
 Mesos-consul automatically registers/deregisters services run as Mesos tasks.
 
@@ -44,7 +44,7 @@ Registrator is another tool that populates Consul (and other backends like etcd)
 
 ## Building
 ```
-docker build -t mesos-consul . 
+docker build -t mesos-consul .
 ```
 
 ## Running
@@ -72,7 +72,7 @@ Where `mesos-consul.json` is similar to (replacing the image with your image):
   "id": "mesos-consul",
   "instances": 1,
   "cpus": 0.1,
-  "mem": 256 
+  "mem": 256
 }
 
 
@@ -87,7 +87,12 @@ You can add options to authenticate via basic http or Consul token.
 
 |         Option        | Description |
 |-----------------------|-------------|
+| `version`             | Print mesos-consul version
 | `refresh`             | Time between refreshes of Mesos tasks
+| `mesos-ip-order`             | Comma separated list to control the order in which github.com/CiscoCloud/mesos-consul searches or the task IP address. Valid options are 'netinfo', 'mesos', 'docker' and 'host' (default netinfo,mesos,host)
+| `healthcheck`             | Enables a http endpoint for health checks. When this flag is enabled, serves health status on 127.0.0.1:24476
+| `healthcheck-ip`             | Health check service interface ip. Default 127.0.0.1
+| `healthcheck-port`             | Health check service port. Default 24476
 | `consul-auth`       | The basic authentication username (and optional password), separated by a colon.
 | `consul-ssl`        | Use HTTPS while talking to the registry.
 | `consul-ssl-verify` | Verify certificates when connecting via SSL.
@@ -101,7 +106,7 @@ You can add options to authenticate via basic http or Consul token.
 
 #### Leader, Master and Follower Nodes
 
-|    Role    | Registration 
+|    Role    | Registration
 |------------|--------------
 | `Leader`   | `leader.mesos.service.consul`, `master.mesos.service.consul`
 | `Master`   | `master.mesos.service.consul`
@@ -115,7 +120,7 @@ Tasks are registered as `task_name.service.consul`
 
 Tags can be added to consul by using labels in Mesos. If you are using Marathon you can add a label called `tags` to your service definition with a  comma-separated list of strings that will be registered in consul as tags.
 
-For example, in your marathon service definition: 
+For example, in your marathon service definition:
 
 ```
 {
