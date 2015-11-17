@@ -52,7 +52,7 @@ func parseFlags(args []string) (*config.Config, error) {
 	var doVersion bool
 	var c = config.DefaultConfig()
 
-	flags := flag.NewFlagSet("github.com/CiscoCloud/mesos-consul", flag.ContinueOnError)
+	flags := flag.NewFlagSet("mesos-consul", flag.ContinueOnError)
 	flags.Usage = func() {
 		fmt.Println(Help())
 	}
@@ -100,7 +100,7 @@ func parseFlags(args []string) (*config.Config, error) {
 
 func Help() string {
 	helpText := `
-Usage: github.com/CiscoCloud/mesos-consul [options]
+Usage: mesos-consul [options]
 
 Options:
 
