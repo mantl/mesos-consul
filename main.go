@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 	"time"
-  "net/http"
+	"net/http"
 
 	"github.com/CiscoCloud/mesos-consul/config"
 	"github.com/CiscoCloud/mesos-consul/consul"
