@@ -92,12 +92,19 @@ func (c *Consul) Register(service *registry.Service) {
 	if _, ok := serviceCache[service.ID]; ok {
 		log.Debugf("Service found. Not registering: %s", service.ID)
 		serviceCache[service.ID].isRegistered = true
-		return 
+		return
 	}
 
-	if _, ok := c.agents[service.Agent]; !ok {
+	var agentAddress string
+	if c.config.address != "" {
+		agentAddress = c.config.address
+	} else {
+		agentAddress = service.Agent
+	}
+
+	if _, ok := c.agents[agentAddress]; !ok {
 		// Agent connection not saved. Connect.
-		c.agents[service.Agent] = c.newAgent(service.Agent)
+		c.agents[agentAddress] = c.newAgent(agentAddress)
 	}
 
 	log.Info("Registering ", service.ID)
@@ -119,14 +126,14 @@ func (c *Consul) Register(service *registry.Service) {
 		s.Tags = service.Tags
 	}
 
-	err := c.agents[service.Agent].Agent().ServiceRegister(s)
+	err := c.agents[agentAddress].Agent().ServiceRegister(s)
 	if err != nil {
 		log.Warnf("Unable to register %s: %s", s.ID, err.Error())
 		return
 	}
 
 	serviceCache[s.ID] = &cacheEntry{
-		agent:        service.Agent,
+		agent:        agentAddress,
 		service:      s,
 		isRegistered: true,
 	}

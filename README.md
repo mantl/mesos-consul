@@ -61,14 +61,14 @@ Where `mesos-consul.json` is similar to (replacing the image with your image):
 {
   "args": [
     "--zk=zk://zookeeper.service.consul:2181/mesos"
-  ],  
+  ],
   "container": {
     "type": "DOCKER",
     "docker": {
       "network": "BRIDGE",
       "image": "{{ mesos_consul_image }}:{{ mesos_consul_image_tag }}"
-    }   
-  },  
+    }
+  },
   "id": "mesos-consul",
   "instances": 1,
   "cpus": 0.1,
@@ -93,6 +93,8 @@ You can add options to authenticate via basic http or Consul token.
 | `healthcheck`             | Enables a http endpoint for health checks. When this flag is enabled, serves health status on 127.0.0.1:24476
 | `healthcheck-ip`             | Health check service interface ip (default 127.0.0.1)
 | `healthcheck-port`             | Health check service port. (default 24476)
+| `consul-address`    | The Consul agent API address. If empty, will use the service's agent's address. (default "")
+| `consul-port`       | The Consul agent API port. (default 8500)
 | `consul-auth`       | The basic authentication username (and optional password), separated by a colon.
 | `consul-ssl`        | Use HTTPS while talking to the registry.
 | `consul-ssl-verify` | Verify certificates when connecting via SSL.
