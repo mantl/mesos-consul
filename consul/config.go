@@ -10,6 +10,7 @@ import (
 type consulConfig struct {
 	enabled    bool
 	auth       auth
+	address    string
 	port       string
 	sslEnabled bool
 	sslVerify  bool
@@ -22,6 +23,7 @@ var config consulConfig
 
 func AddCmdFlags(f *flag.FlagSet) {
 	f.BoolVar(&config.enabled, "consul", false, "")
+	f.StringVar(&config.address, "consul-address", "", "")
 	f.StringVar(&config.port, "consul-port", "8500", "")
 	f.Var((*authVar)(&config.auth), "consul-auth", "")
 	f.BoolVar(&config.sslEnabled, "consul-ssl", false, "")
@@ -36,6 +38,8 @@ func Help() string {
 Consul Options:
 
   --consul			Use Consul backend
+  --consul-address Consul agent API address. If empty, will use the service's agent's address.
+				(default: "")
   --consul-port			Consul agent API port
 				(default: 8500)
   --consul-auth			The basic authentication username (and optional password),
