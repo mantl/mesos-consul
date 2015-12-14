@@ -91,8 +91,8 @@ func (c *Consul) newAgent(address string) *consulapi.Client {
 func (c *Consul) Register(service *registry.Service) {
 	if _, ok := serviceCache[service.ID]; ok {
 		log.Debugf("Service found. Not registering: %s", service.ID)
-		serviceCache[service.ID].isRegistered = true
-		return 
+		c.CacheMark(service.ID)
+		return
 	}
 
 	if _, ok := c.agents[service.Agent]; !ok {
@@ -125,11 +125,8 @@ func (c *Consul) Register(service *registry.Service) {
 		return
 	}
 
-	serviceCache[s.ID] = &cacheEntry{
-		agent:        service.Agent,
-		service:      s,
-		isRegistered: true,
-	}
+	serviceCache[s.ID] = newCacheEntry(s, service.Agent)
+	c.CacheMark(s.ID)
 }
 
 // Deregister()
@@ -137,15 +134,15 @@ func (c *Consul) Register(service *registry.Service) {
 //
 func (c *Consul) Deregister() error {
 	for s, b := range serviceCache {
-		if !b.isRegistered {
+		if c.CacheIsValid(s) {
+			c.CacheProcessDeregister(s)
+		} else {
 			log.Infof("Deregistering %s", s)
 			err := c.deregister(b.agent, b.service)
 			if err != nil {
 				return err
 			}
 			delete(serviceCache, s)
-		} else {
-			serviceCache[s].isRegistered = false
 		}
 	}
 
