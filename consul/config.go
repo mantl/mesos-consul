@@ -8,14 +8,15 @@ import (
 )
 
 type consulConfig struct {
-	enabled    bool
-	auth       auth
-	port       string
-	sslEnabled bool
-	sslVerify  bool
-	sslCert    string
-	sslCaCert  string
-	token      string
+	enabled                bool
+	auth                   auth
+	port                   string
+	sslEnabled             bool
+	sslVerify              bool
+	sslCert                string
+	sslCaCert              string
+	token                  string
+	heartbeatsBeforeRemove int
 }
 
 var config consulConfig
@@ -29,6 +30,7 @@ func AddCmdFlags(f *flag.FlagSet) {
 	f.StringVar(&config.sslCert, "consul-ssl-cert", "", "")
 	f.StringVar(&config.sslCaCert, "consul-ssl-cacert", "", "")
 	f.StringVar(&config.token, "consul-token", "", "")
+	f.IntVar(&config.heartbeatsBeforeRemove, "heartbeats-before-remove", 1, "")
 }
 
 func Help() string {
@@ -54,6 +56,9 @@ Consul Options:
 				(default: not set)
   --consul-token		The Consul ACL token
 				(default: not set)
+  --heartbeats-before-remove	Number of times that registration needs to fail
+				before removing task from Consul
+				(default: 1)
 
 `
 

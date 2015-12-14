@@ -10,13 +10,22 @@ import (
 )
 
 type cacheEntry struct {
-	service      *consulapi.AgentServiceRegistration
-	agent        string
-	isRegistered bool
+	service         *consulapi.AgentServiceRegistration
+	agent           string
+	validityCounter int
+}
+
+func newCacheEntry(service *consulapi.AgentServiceRegistration, agent string) *cacheEntry {
+	return &cacheEntry{
+		agent:           service.Address,
+		service:         service,
+		validityCounter: 0,
+	}
 }
 
 // Service cache
 var serviceCache map[string]*cacheEntry
+var cacheEntryValidityThreshold int = 1
 
 // CacheCreate()
 //
@@ -48,17 +57,13 @@ func (c *Consul) CacheLoad(host string) error {
 		for _, s := range catalogServices {
 			if strings.HasPrefix(s.ServiceID, "mesos-consul:") {
 				log.Debugf("Found '%s' with ID '%s'", s.ServiceName, s.ServiceID)
-				serviceCache[s.ServiceID] = &cacheEntry{
-					agent: s.Address,
-					service: &consulapi.AgentServiceRegistration{
-						ID:      s.ServiceID,
-						Name:    s.ServiceName,
-						Port:    s.ServicePort,
-						Address: s.ServiceAddress,
-						Tags:    s.ServiceTags,
-					},
-					isRegistered: false,
-				}
+				serviceCache[s.ServiceID] = newCacheEntry(&consulapi.AgentServiceRegistration{
+					ID:      s.ServiceID,
+					Name:    s.ServiceName,
+					Port:    s.ServicePort,
+					Address: s.ServiceAddress,
+					Tags:    s.ServiceTags,
+				}, s.Address)
 			}
 		}
 	}
@@ -93,10 +98,26 @@ func (c *Consul) CacheDelete(id string) {
 }
 
 // CacheMark()
-//   Mark the service ID as registered
+//   Mark the service ID as valid
 //
 func (c *Consul) CacheMark(id string) {
 	if _, ok := serviceCache[id]; ok {
-		serviceCache[id].isRegistered = true
+		serviceCache[id].validityCounter = 0
 	}
+}
+
+// CacheProcessDeregister()
+//   Calculate the validity of the entry
+//
+func (c *Consul) CacheProcessDeregister(id string) {
+	if _, ok := serviceCache[id]; ok {
+		serviceCache[id].validityCounter++
+	}
+}
+
+func (c *Consul) CacheIsValid(id string) bool {
+	if _, ok := serviceCache[id]; ok {
+		return serviceCache[id].validityCounter < cacheEntryValidityThreshold
+	}
+	return false
 }
