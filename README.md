@@ -100,6 +100,7 @@ You can add options to authenticate via basic http or Consul token.
 | `consul-ssl-cacert` | Path to a CA certificate file, containing one or more CA certificates to use to valid the registry server certificate
 | `consul-token`      | The registry ACL token
 | `whitelist`         | Only register services matching the provided regex. Can be specified multitple time
+| `heartbeats-before-remove` | Number of times that registration needs to fail before removing task from Consul. (default: 1)
 | `zk`*                 | Location of the Mesos path in Zookeeper. The default value is zk://127.0.0.1:2181/mesos
 
 
