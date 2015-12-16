@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -34,6 +35,8 @@ type Mesos struct {
 	startChan chan struct{}
 
 	IpOrder []string
+	WhiteList string
+	whitelistRegex *regexp.Regexp
 }
 
 func New(c *config.Config) *Mesos {
@@ -41,6 +44,21 @@ func New(c *config.Config) *Mesos {
 
 	if c.Zk == "" {
 		return nil
+	}
+
+	if len(c.WhiteList) > 0 {
+		m.WhiteList = strings.Join(c.WhiteList, "|")
+		log.WithField("whitelist", m.WhiteList).Debug("Using whitelist regex")
+		re, err := regexp.Compile(m.WhiteList)
+		if err != nil {
+			// For now, exit if the regex fails to compile. If we read regexes from Consul
+			// maybe we emit a warning and use the old regex
+			//
+			log.WithField("whitelist", m.WhiteList).Fatal("WhiteList regex failed to compile")
+		}
+		m.whitelistRegex = re
+	} else {
+		m.whitelistRegex = nil
 	}
 
 	m.Registry = consul.New()

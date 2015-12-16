@@ -66,6 +66,10 @@ func parseFlags(args []string) (*config.Config, error) {
 	flags.BoolVar(&c.Healthcheck, "healthcheck", false, "")
 	flags.StringVar(&c.HealthcheckIp, "healthcheck-ip", "127.0.0.1", "")
 	flags.StringVar(&c.HealthcheckPort, "healthcheck-port", "24476", "")
+	flags.Var((funcVar)(func(s string) error {
+		c.WhiteList = append(c.WhiteList, s)
+		return nil
+	}), "whitelist", "")
 
 	consul.AddCmdFlags(flags)
 
@@ -121,3 +125,9 @@ Options:
 
 	return strings.TrimSpace(helpText)
 }
+
+type funcVar func(s string) error
+
+func (f funcVar) Set(s string) error { return f(s) }
+func (f funcVar) String() string { return "" }
+func (f funcVar) IsBoolFlag() bool {return false }
