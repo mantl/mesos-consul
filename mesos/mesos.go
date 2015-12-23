@@ -39,6 +39,7 @@ type Mesos struct {
 	whitelistRegex *regexp.Regexp
 
 	ServiceName string
+	ServiceTags []string
 }
 
 func New(c *config.Config) *Mesos {
@@ -82,6 +83,10 @@ func New(c *config.Config) *Mesos {
 		}
 	}
 	log.Debugf("m.IpOrder = '%v'", m.IpOrder)
+
+	if c.ServiceTags != "" {
+		m.ServiceTags = strings.Split(c.ServiceTags, ",")
+	}
 
 	return m
 }
