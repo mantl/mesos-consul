@@ -38,8 +38,8 @@ func (m *Mesos) RegisterHosts(s state.State) {
 		m.Agents[f.ID] = agent
 
 		m.registerHost(&registry.Service{
-			ID:      fmt.Sprintf("mesos-consul:mesos:%s:%s", f.ID, f.Hostname),
-			Name:    "mesos",
+			ID:      fmt.Sprintf("mesos-consul:%s:%s:%s", m.ServiceName, f.ID, f.Hostname),
+			Name:    m.ServiceName,
 			Port:    port,
 			Address: agent,
 			Agent:   agent,
@@ -62,8 +62,8 @@ func (m *Mesos) RegisterHosts(s state.State) {
 			tags = []string{"master"}
 		}
 		s := &registry.Service{
-			ID:      fmt.Sprintf("mesos-consul:mesos:%s:%s", ma.Ip, ma.PortString),
-			Name:    "mesos",
+			ID:      fmt.Sprintf("mesos-consul:%s:%s:%s", m.ServiceName, ma.Ip, ma.PortString),
+			Name:    m.ServiceName,
 			Port:    ma.Port,
 			Address: ma.Ip,
 			Agent:   ma.Ip,

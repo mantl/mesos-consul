@@ -37,6 +37,8 @@ type Mesos struct {
 	IpOrder []string
 	WhiteList string
 	whitelistRegex *regexp.Regexp
+
+	ServiceName string
 }
 
 func New(c *config.Config) *Mesos {
@@ -60,6 +62,8 @@ func New(c *config.Config) *Mesos {
 	} else {
 		m.whitelistRegex = nil
 	}
+
+	m.ServiceName = cleanName(c.ServiceName)
 
 	m.Registry = consul.New()
 
