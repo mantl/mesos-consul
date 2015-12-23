@@ -119,6 +119,13 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 	var tags []string
 
 	tname := cleanName(t.Name)
+	if m.whitelistRegex != nil {
+		if !m.whitelistRegex.MatchString(tname) {
+			log.WithField("task", tname).Debug("Task not on whitelist")
+			// No match
+			return
+		}
+	}
 
 	address := t.IP(m.IpOrder...)
 
