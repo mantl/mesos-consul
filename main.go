@@ -121,6 +121,14 @@ Options:
 				which github.com/CiscoCloud/mesos-consul searches for the task IP
 				address. Valid options are 'netinfo', 'mesos', 'docker' and 'host'
 				(default netinfo,mesos,host)
+  --heartbeats-before-remove	Number of times that registration needs to fail before removing
+				task from Consul. (default: 1)
+  --whitelist=<regex>		Only register services matching the provided regex. 
+				Can be specified multiple times
+  --service-name=<name>		Service name of the Mesos hosts. (default: mesos)
+  --service-tags=<tag>,...	Comma delimited list of tags to add to the mesos hosts
+				Hosts are registered as
+				(leader|master|follower).<tag>.mesos.service.conul
 ` + consul.Help()
 
 	return strings.TrimSpace(helpText)
