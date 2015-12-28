@@ -17,7 +17,7 @@ type cacheEntry struct {
 
 func newCacheEntry(service *consulapi.AgentServiceRegistration, agent string) *cacheEntry {
 	return &cacheEntry{
-		agent:           service.Address,
+		agent:           agent,
 		service:         service,
 		validityCounter: 0,
 	}
