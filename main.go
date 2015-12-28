@@ -70,6 +70,8 @@ func parseFlags(args []string) (*config.Config, error) {
 		c.WhiteList = append(c.WhiteList, s)
 		return nil
 	}), "whitelist", "")
+	flags.StringVar(&c.ServiceName, "service-name", "mesos", "")
+	flags.StringVar(&c.ServiceTags, "service-tags", "", "")
 
 	consul.AddCmdFlags(flags)
 

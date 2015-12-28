@@ -37,6 +37,9 @@ type Mesos struct {
 	IpOrder []string
 	WhiteList string
 	whitelistRegex *regexp.Regexp
+
+	ServiceName string
+	ServiceTags []string
 }
 
 func New(c *config.Config) *Mesos {
@@ -61,6 +64,8 @@ func New(c *config.Config) *Mesos {
 		m.whitelistRegex = nil
 	}
 
+	m.ServiceName = cleanName(c.ServiceName)
+
 	m.Registry = consul.New()
 
 	if m.Registry == nil {
@@ -78,6 +83,10 @@ func New(c *config.Config) *Mesos {
 		}
 	}
 	log.Debugf("m.IpOrder = '%v'", m.IpOrder)
+
+	if c.ServiceTags != "" {
+		m.ServiceTags = strings.Split(c.ServiceTags, ",")
+	}
 
 	return m
 }
@@ -176,5 +185,8 @@ func (m *Mesos) parseState(sj state.State) {
 	}
 
 	// Remove completed tasks
-	m.Registry.Deregister()
+    err := m.Registry.Deregister()
+    if err != nil {
+        log.Error(err)
+    }
 }

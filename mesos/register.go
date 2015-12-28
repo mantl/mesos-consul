@@ -30,6 +30,7 @@ func (m *Mesos) RegisterHosts(s state.State) {
 
 	m.Agents = make(map[string]string)
 
+
 	// Register slaves
 	for _, f := range s.Slaves {
 		agent := toIP(f.PID.Host)
@@ -38,12 +39,12 @@ func (m *Mesos) RegisterHosts(s state.State) {
 		m.Agents[f.ID] = agent
 
 		m.registerHost(&registry.Service{
-			ID:      fmt.Sprintf("mesos-consul:mesos:%s:%s", f.ID, f.Hostname),
-			Name:    "mesos",
+			ID:      fmt.Sprintf("mesos-consul:%s:%s:%s", m.ServiceName, f.ID, f.Hostname),
+			Name:    m.ServiceName,
 			Port:    port,
 			Address: agent,
 			Agent:   agent,
-			Tags:    []string{"agent", "follower"},
+			Tags:    m.agentTags("agent", "follower"),
 			Check: &registry.Check{
 				HTTP:     fmt.Sprintf("http://%s:%d/slave(1)/health", agent, port),
 				Interval: "10s",
@@ -57,13 +58,13 @@ func (m *Mesos) RegisterHosts(s state.State) {
 		var tags []string
 
 		if ma.IsLeader {
-			tags = []string{"leader", "master"}
+			tags = m.agentTags("leader", "master")
 		} else {
-			tags = []string{"master"}
+			tags = m.agentTags("master")
 		}
 		s := &registry.Service{
-			ID:      fmt.Sprintf("mesos-consul:mesos:%s:%s", ma.Ip, ma.PortString),
-			Name:    "mesos",
+			ID:      fmt.Sprintf("mesos-consul:%s:%s:%s", m.ServiceName, ma.Ip, ma.PortString),
+			Name:    m.ServiceName,
 			Port:    ma.Port,
 			Address: ma.Ip,
 			Agent:   ma.Ip,
@@ -187,4 +188,20 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 			Agent: toIP(agent),
 		})
 	}
+}
+
+func (m *Mesos) agentTags(ts ...string) []string {
+	if len(m.ServiceTags) == 0 {
+		return ts
+	}
+
+	rval := []string{}
+
+	for _, tag := range m.ServiceTags {
+		for _, t := range ts {
+			rval = append(rval, fmt.Sprintf("%s.%s", t, tag))
+		}
+	}
+
+	return rval
 }
