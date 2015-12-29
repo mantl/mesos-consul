@@ -30,7 +30,6 @@ func (m *Mesos) RegisterHosts(s state.State) {
 
 	m.Agents = make(map[string]string)
 
-
 	// Register slaves
 	for _, f := range s.Slaves {
 		agent := toIP(f.PID.Host)
@@ -137,6 +136,11 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 		tags = []string{}
 	}
 
+	labels := make(map[string]string)
+	for _, v := range t.Labels {
+		labels[v.Key] = v.Value
+	}
+
 	for key := range t.DiscoveryInfo.Ports.DiscoveryPorts {
 		discoveryPort := state.DiscoveryPort(t.DiscoveryInfo.Ports.DiscoveryPorts[key])
 		serviceName := discoveryPort.Name
@@ -168,6 +172,7 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 				Name:    tname,
 				Port:    toPort(port),
 				Address: address,
+				Labels:  labels,
 				Tags:    tags,
 				Check: GetCheck(t, &CheckVar{
 					Host: toIP(address),
@@ -181,6 +186,7 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 			ID:      fmt.Sprintf("mesos-consul:%s-%s", agent, tname),
 			Name:    tname,
 			Address: address,
+			Labels:  labels,
 			Tags:    tags,
 			Check: GetCheck(t, &CheckVar{
 				Host: toIP(address),

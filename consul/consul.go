@@ -119,6 +119,10 @@ func (c *Consul) Register(service *registry.Service) {
 		s.Tags = service.Tags
 	}
 
+	for k, v := range service.Labels {
+		s.Tags = append(s.Tags, fmt.Sprintf("%s=%s", k, v))
+	}
+
 	err := c.agents[service.Agent].Agent().ServiceRegister(s)
 	if err != nil {
 		log.Warnf("Unable to register %s: %s", s.ID, err.Error())
