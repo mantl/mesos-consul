@@ -12,6 +12,7 @@ type Service struct {
 	Name    string
 	Port    int
 	Address string
+	Labels  map[string]string
 	Tags    []string
 	Check   *Check
 	Agent   string
@@ -24,7 +25,7 @@ type Registry interface {
 	CacheLookup(string) *Service
 	CacheMark(string)
 
-	Register(*Service) 
+	Register(*Service)
 	Deregister() error
 }
 
