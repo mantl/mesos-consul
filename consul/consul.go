@@ -138,7 +138,7 @@ func (c *Consul) Deregister() error {
 			c.CacheProcessDeregister(s)
 		} else {
 			log.Infof("Deregistering %s", s)
-			err = c.deregister(b.agent, b.service)
+			err := c.deregister(b.agent, b.service)
 			if err != nil {
 				// Deregistration often fails for valid reasons,
 				// most commonly that the host is down.
