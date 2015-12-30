@@ -30,7 +30,6 @@ func (m *Mesos) RegisterHosts(s state.State) {
 
 	m.Agents = make(map[string]string)
 
-
 	// Register slaves
 	for _, f := range s.Slaves {
 		agent := toIP(f.PID.Host)
@@ -162,10 +161,18 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 	}
 
 	if t.Resources.PortRanges != "" {
-		for _, port := range t.Resources.Ports() {
+		for i, port := range t.Resources.Ports() {
+			// We append -portN to ports after the first.
+			// This is done to preserve compatibility with
+			// existing implementations which may rely on the
+			// old unprefixed name.
+			svcName := tname
+			if i > 0 {
+				svcName = fmt.Sprintf("%s-port%d", svcName, i+1)
+			}
 			m.Registry.Register(&registry.Service{
 				ID:      fmt.Sprintf("mesos-consul:%s:%s:%s", agent, tname, port),
-				Name:    tname,
+				Name:    svcName,
 				Port:    toPort(port),
 				Address: address,
 				Tags:    tags,
