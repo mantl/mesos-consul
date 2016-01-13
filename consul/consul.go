@@ -51,7 +51,7 @@ func (c *Consul) newAgent(address string) *consulapi.Client {
 
 	config := consulapi.DefaultConfig()
 
-	config.Address = fmt.Sprintf("%s:%s", address, c.config.port)
+	config.Address = fmt.Sprintf("%s:%s", c.config.ip, c.config.port)
 	log.Debugf("consul address: %s", config.Address)
 
 	if c.config.token != "" {
