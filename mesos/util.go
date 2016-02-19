@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func cleanName(name string) string {
+func cleanName(name string, separator string) string {
 	reg, err := regexp.Compile("[^\\w-]")
 	if err != nil {
 		log.Warn(err)
@@ -18,7 +18,7 @@ func cleanName(name string) string {
 
 	s := reg.ReplaceAllString(name, "-")
 
-	return strings.ToLower(strings.Replace(s, "_", "-", -1))
+	return strings.ToLower(strings.Replace(s, "_", separator, -1))
 }
 
 func leaderIP(leader string) string {

@@ -119,7 +119,7 @@ func (m *Mesos) registerHost(s *registry.Service) {
 func (m *Mesos) registerTask(t *state.Task, agent string) {
 	var tags []string
 
-	tname := cleanName(t.Name)
+	tname := cleanName(t.Name, m.Separator)
 	if m.whitelistRegex != nil {
 		if !m.whitelistRegex.MatchString(tname) {
 			log.WithField("task", tname).Debug("Task not on whitelist")
