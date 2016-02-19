@@ -18,7 +18,7 @@ func cleanName(name string) string {
 
 	s := reg.ReplaceAllString(name, "-")
 
-	return strings.ToLower(strings.Replace(s, "_", "", -1))
+	return strings.ToLower(strings.Replace(s, "_", "-", -1))
 }
 
 func leaderIP(leader string) string {
