@@ -140,9 +140,14 @@ func (c *Consul) Deregister() error {
 			log.Infof("Deregistering %s", s)
 			err := c.deregister(b.agent, b.service)
 			if err != nil {
-				return err
+				// Deregistration often fails for valid reasons,
+				// most commonly that the host is down.
+				// Log the error and continue.
+				log.Info("Deregistration error ", err)
+			} else {
+				delete(serviceCache, s)
 			}
-			delete(serviceCache, s)
+
 		}
 	}
 
