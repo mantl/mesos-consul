@@ -62,6 +62,7 @@ func parseFlags(args []string) (*config.Config, error) {
 	flags.StringVar(&c.LogLevel, "log-level", "WARN", "")
 	flags.DurationVar(&c.Refresh, "refresh", time.Minute, "")
 	flags.StringVar(&c.Zk, "zk", "zk://127.0.0.1:2181/mesos", "")
+	flags.StringVar(&c.Separator, "group-separator", "", "")
 	flags.StringVar(&c.MesosIpOrder, "mesos-ip-order", "netinfo,mesos,host", "")
 	flags.BoolVar(&c.Healthcheck, "healthcheck", false, "")
 	flags.StringVar(&c.HealthcheckIp, "healthcheck-ip", "127.0.0.1", "")
@@ -115,6 +116,7 @@ Options:
 				(default "WARN")
   --refresh=<time>		Set the Mesos refresh rate (default 1m)
   --zk=<address>		Zookeeper path to Mesos (default zk://127.0.0.1:2181/mesos)
+  --group-separator=<separator> Choose the group separator. Will replace _ in task names (default is empty)
   --healthcheck 		Enables a http endpoint for health checks. When this
 				flag is enabled, serves a service health status on 127.0.0.1:24476 (default not enabled)
   --healthcheck-ip=<ip> 	Health check interface ip (default 127.0.0.1)
