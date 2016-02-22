@@ -152,17 +152,17 @@ func (m *Mesos) loadState() (state.State, error) {
 	log.Infof("Zookeeper leader: %s:%s", mh.Ip, mh.PortString)
 
 	log.Info("reloading from master ", mh.Ip)
-	sj = m.loadFromMaster(mh.Ip, mh.PortString)
+	sj, err = m.loadFromMaster(mh.Ip, mh.PortString)
 
 	if rip := leaderIP(sj.Leader); rip != mh.Ip {
 		log.Warn("master changed to ", rip)
-		sj = m.loadFromMaster(rip, mh.PortString)
+		sj, err = m.loadFromMaster(rip, mh.PortString)
 	}
 
 	return sj, err
 }
 
-func (m *Mesos) loadFromMaster(ip string, port string) (sj state.State) {
+func (m *Mesos) loadFromMaster(ip string, port string) (sj state.State, err error) {
 	url := "http://" + ip + ":" + port + "/master/state.json"
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -171,21 +171,21 @@ func (m *Mesos) loadFromMaster(ip string, port string) (sj state.State) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return
 	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		return
 	}
 
 	err = json.Unmarshal(body, &sj)
 	if err != nil {
-		log.Fatal(err)
+		return
 	}
 
-	return sj
+	return sj, nil
 }
 
 func (m *Mesos) parseState(sj state.State) {
