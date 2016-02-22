@@ -30,7 +30,6 @@ func (m *Mesos) RegisterHosts(s state.State) {
 
 	m.Agents = make(map[string]string)
 
-
 	// Register slaves
 	for _, f := range s.Slaves {
 		agent := toIP(f.PID.Host)

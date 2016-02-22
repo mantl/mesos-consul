@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"time"
-	"net/http"
 
 	"github.com/CiscoCloud/mesos-consul/config"
 	"github.com/CiscoCloud/mesos-consul/consul"
@@ -44,7 +44,7 @@ func StartHealthcheckService(c *config.Config) {
 }
 
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
-  fmt.Fprintln(w, "OK")
+	fmt.Fprintln(w, "OK")
 }
 
 func parseFlags(args []string) (*config.Config, error) {
@@ -141,5 +141,5 @@ Options:
 type funcVar func(s string) error
 
 func (f funcVar) Set(s string) error { return f(s) }
-func (f funcVar) String() string { return "" }
-func (f funcVar) IsBoolFlag() bool {return false }
+func (f funcVar) String() string     { return "" }
+func (f funcVar) IsBoolFlag() bool   { return false }

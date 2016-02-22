@@ -132,7 +132,7 @@ func (c *Consul) Register(service *registry.Service) {
 // Deregister()
 //   Deregister services that no longer exist
 //
-func (c *Consul) Deregister() error {
+func (c *Consul) Deregister() {
 	for s, b := range serviceCache {
 		if c.CacheIsValid(s) {
 			c.CacheProcessDeregister(s)
@@ -140,13 +140,12 @@ func (c *Consul) Deregister() error {
 			log.Infof("Deregistering %s", s)
 			err := c.deregister(b.agent, b.service)
 			if err != nil {
-				return err
+				log.Info("Deregistration error ", err)
+			} else {
+				delete(serviceCache, s)
 			}
-			delete(serviceCache, s)
 		}
 	}
-
-	return nil
 }
 
 func (c *Consul) deregister(agent string, service *consulapi.AgentServiceRegistration) error {

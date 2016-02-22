@@ -34,8 +34,8 @@ type Mesos struct {
 	started   sync.Once
 	startChan chan struct{}
 
-	IpOrder []string
-	WhiteList string
+	IpOrder        []string
+	WhiteList      string
 	whitelistRegex *regexp.Regexp
 
 	Separator string
@@ -187,9 +187,5 @@ func (m *Mesos) parseState(sj state.State) {
 		}
 	}
 
-	// Remove completed tasks
-    err := m.Registry.Deregister()
-    if err != nil {
-        log.Error(err)
-    }
+	m.Registry.Deregister()
 }

@@ -24,8 +24,8 @@ type Registry interface {
 	CacheLookup(string) *Service
 	CacheMark(string)
 
-	Register(*Service) 
-	Deregister() error
+	Register(*Service)
+	Deregister()
 }
 
 func DefaultCheck() *Check {

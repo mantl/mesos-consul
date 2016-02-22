@@ -16,8 +16,8 @@ type Config struct {
 	Separator       string
 
 	// Mesos service name and tags
-	ServiceName	string
-	ServiceTags	string
+	ServiceName string
+	ServiceTags string
 }
 
 func DefaultConfig() *Config {
