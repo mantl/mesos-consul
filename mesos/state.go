@@ -23,7 +23,7 @@ var globalCV *CheckVar
 func GetCheck(t *state.Task, cv *CheckVar) *registry.Check {
 	c := registry.DefaultCheck()
 
-	for _, l := range t.DiscoveryInfo.Labels.Labels {
+	for _, l := range t.Labels {
 		k := strings.ToLower(l.Key)
 
 		switch k {
