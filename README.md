@@ -1,5 +1,7 @@
 # mesos-consul
 
+[![Build Status](https://travis-ci.org/CiscoCloud/mesos-consul.svg)](https://travis-ci.org/CiscoCloud/mesos-consul)
+
 Mesos to Consul bridge for service discovery.
 
 Mesos-consul automatically registers/deregisters services run as Mesos tasks.
