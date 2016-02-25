@@ -71,6 +71,10 @@ func parseFlags(args []string) (*config.Config, error) {
 		c.WhiteList = append(c.WhiteList, s)
 		return nil
 	}), "whitelist", "")
+	flags.Var((funcVar)(func(s string) error {
+		c.BlackList = append(c.BlackList, s)
+		return nil
+	}), "blacklist", "")
 	flags.StringVar(&c.ServiceName, "service-name", "mesos", "")
 	flags.StringVar(&c.ServiceTags, "service-tags", "", "")
 
@@ -128,6 +132,8 @@ Options:
   --heartbeats-before-remove	Number of times that registration needs to fail before removing
 				task from Consul. (default: 1)
   --whitelist=<regex>		Only register services matching the provided regex. 
+				Can be specified multiple times
+  --blacklist=<regex>		Only register services matching the provided regex. 
 				Can be specified multiple times
   --service-name=<name>		Service name of the Mesos hosts. (default: mesos)
   --service-tags=<tag>,...	Comma delimited list of tags to add to the mesos hosts
