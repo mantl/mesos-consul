@@ -37,6 +37,8 @@ type Mesos struct {
 	IpOrder        []string
 	WhiteList      string
 	whitelistRegex *regexp.Regexp
+	BlackList      string
+	blacklistRegex *regexp.Regexp
 
 	Separator string
 
@@ -65,6 +67,21 @@ func New(c *config.Config) *Mesos {
 		m.whitelistRegex = re
 	} else {
 		m.whitelistRegex = nil
+	}
+
+	if len(c.BlackList) > 0 {
+		m.BlackList = strings.Join(c.BlackList, "|")
+		log.WithField("blacklist", m.BlackList).Debug("Using blacklist regex")
+		re, err := regexp.Compile(m.BlackList)
+		if err != nil {
+			// For now, exit if the regex fails to compile. If we read regexes from Consul
+			// maybe we emit a warning and use the old regex
+			//
+			log.WithField("blacklist", m.BlackList).Fatal("BlackList regex failed to compile")
+		}
+		m.blacklistRegex = re
+	} else {
+		m.blacklistRegex = nil
 	}
 
 	m.ServiceName = cleanName(c.ServiceName, c.Separator)
