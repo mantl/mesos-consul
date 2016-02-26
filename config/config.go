@@ -20,6 +20,7 @@ type Config struct {
 	Separator       string
 
 	// Mesos service name and tags
+	LeaderTags      string
 	ServiceName     string
 	ServiceTags     string
 	ServiceIdPrefix string
@@ -41,6 +42,7 @@ func DefaultConfig() *Config {
 		Separator:       "",
 		ServiceName:     "mesos",
 		ServiceTags:     "",
+		LeaderTags:      "",
 		ServiceIdPrefix: "mesos-consul",
 	}
 }

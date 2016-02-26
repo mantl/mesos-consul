@@ -57,7 +57,9 @@ func (m *Mesos) RegisterHosts(s state.State) {
 		var tags []string
 
 		if ma.IsLeader {
-			tags = m.agentTags("leader", "master")
+			default_tags := m.agentTags("leader", "master")
+			custom_tags := m.LeaderTags
+			tags = append(default_tags, custom_tags...)
 		} else {
 			tags = m.agentTags("master")
 		}
