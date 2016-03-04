@@ -14,6 +14,7 @@ type Config struct {
 	HealthcheckPort string
 	WhiteList       []string
 	BlackList       []string
+	TaskTag         []string
 	Separator       string
 
 	// Mesos service name and tags
@@ -31,6 +32,7 @@ func DefaultConfig() *Config {
 		HealthcheckPort: "24476",
 		WhiteList:       []string{},
 		BlackList:       []string{},
+		TaskTag:         []string{},
 		Separator:       "",
 		ServiceName:     "mesos",
 		ServiceTags:     "",

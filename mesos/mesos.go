@@ -39,6 +39,7 @@ type Mesos struct {
 	whitelistRegex *regexp.Regexp
 	BlackList      string
 	blacklistRegex *regexp.Regexp
+	taskTag        map[string]string
 
 	Separator string
 
@@ -82,6 +83,17 @@ func New(c *config.Config) *Mesos {
 		m.blacklistRegex = re
 	} else {
 		m.blacklistRegex = nil
+	}
+
+	m.taskTag = make(map[string]string)
+	for _, tt := range c.TaskTag {
+		parts := strings.Split(tt, ":")
+		if len(parts) == 2 {
+			log.WithField("task-tag", c.TaskTag).Debug("Using task-tag pattern")
+			m.taskTag[strings.ToLower(parts[0])] = parts[1]
+		} else {
+			log.WithField("task-tag", c.TaskTag).Fatal("task-tag pattern invalid, must include 1 colon separator")
+		}
 	}
 
 	m.ServiceName = cleanName(c.ServiceName, c.Separator)
