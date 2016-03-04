@@ -133,7 +133,7 @@ Options:
 				task from Consul. (default: 1)
   --whitelist=<regex>		Only register services matching the provided regex. 
 				Can be specified multiple times
-  --blacklist=<regex>		Only register services matching the provided regex. 
+  --blacklist=<regex>		Do not register services matching the provided regex. 
 				Can be specified multiple times
   --service-name=<name>		Service name of the Mesos hosts. (default: mesos)
   --service-tags=<tag>,...	Comma delimited list of tags to add to the mesos hosts
