@@ -75,6 +75,10 @@ func parseFlags(args []string) (*config.Config, error) {
 		c.BlackList = append(c.BlackList, s)
 		return nil
 	}), "blacklist", "")
+	flags.Var((funcVar)(func(s string) error {
+		c.TaskTag = append(c.TaskTag, s)
+		return nil
+	}), "task-tag", "")
 	flags.StringVar(&c.ServiceName, "service-name", "mesos", "")
 	flags.StringVar(&c.ServiceTags, "service-tags", "", "")
 
@@ -134,6 +138,8 @@ Options:
   --whitelist=<regex>		Only register services matching the provided regex. 
 				Can be specified multiple times
   --blacklist=<regex>		Do not register services matching the provided regex. 
+				Can be specified multiple times
+  --task-tag=<pattern:tag>	Tag tasks whose name contains 'pattern' substring (case-insensitive) with given tag.
 				Can be specified multiple times
   --service-name=<name>		Service name of the Mesos hosts. (default: mesos)
   --service-tags=<tag>,...	Comma delimited list of tags to add to the mesos hosts

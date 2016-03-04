@@ -143,6 +143,13 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 		tags = []string{}
 	}
 
+	for pattern, tag := range m.taskTag {
+		if strings.Contains(strings.ToLower(tname), pattern) {
+			log.WithField("task-tag", tname).Debug("Task matches pattern for tag")
+			tags = append(tags, tag)
+		}
+	}
+
 	for key := range t.DiscoveryInfo.Ports.DiscoveryPorts {
 		discoveryPort := state.DiscoveryPort(t.DiscoveryInfo.Ports.DiscoveryPorts[key])
 		serviceName := discoveryPort.Name
