@@ -21,6 +21,31 @@ func cleanName(name string, separator string) string {
 	return strings.ToLower(strings.Replace(s, "_", separator, -1))
 }
 
+// helper function to compare service tag slices
+//
+func sliceEq(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func sliceContainsString(s []string, b string) bool {
+	for _, a := range s {
+		if a == b {
+			return true
+		}
+	}
+	return false
+}
+
 func leaderIP(leader string) string {
 	host := strings.Split(leader, "@")[1]
 	host = strings.Split(host, ":")[0]
