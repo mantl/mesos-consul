@@ -78,22 +78,6 @@ func (m *Mesos) RegisterHosts(s state.State) {
 	}
 }
 
-// helper function to compare service tag slices
-//
-func sliceEq(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-
-	return true
-}
-
 func (m *Mesos) registerHost(s *registry.Service) {
 	h := m.Registry.CacheLookup(s.ID)
 	if h != nil {
@@ -143,12 +127,7 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 		tags = []string{}
 	}
 
-	for pattern, tag := range m.taskTag {
-		if strings.Contains(strings.ToLower(tname), pattern) {
-			log.WithField("task-tag", tname).Debug("Task matches pattern for tag")
-			tags = append(tags, tag)
-		}
-	}
+	tags = buildRegisterTaskTags(tname, tags, m.taskTag)
 
 	for key := range t.DiscoveryInfo.Ports.DiscoveryPorts {
 		discoveryPort := state.DiscoveryPort(t.DiscoveryInfo.Ports.DiscoveryPorts[key])
@@ -201,6 +180,26 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 			Agent: toIP(agent),
 		})
 	}
+}
+
+// buildRegisterTaskTags takes a cleaned task name, a slice of starting tags, and the processed
+// taskTag map and returns a slice of tags that should be applied to this task.
+func buildRegisterTaskTags(taskName string, startingTags []string, taskTag map[string][]string) []string {
+	result := startingTags
+	tnameLower := strings.ToLower(taskName)
+
+	for pattern, taskTags := range taskTag {
+		for _, tag := range taskTags {
+			if strings.Contains(tnameLower, pattern) {
+				if !sliceContainsString(result, tag) {
+					log.WithField("task-tag", tnameLower).Debug("Task matches pattern for tag")
+					result = append(result, tag)
+				}
+			}
+		}
+	}
+
+	return result
 }
 
 func (m *Mesos) agentTags(ts ...string) []string {

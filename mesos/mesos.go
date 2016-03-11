@@ -39,7 +39,7 @@ type Mesos struct {
 	whitelistRegex *regexp.Regexp
 	BlackList      string
 	blacklistRegex *regexp.Regexp
-	taskTag        map[string]string
+	taskTag        map[string][]string
 
 	Separator string
 
@@ -85,15 +85,10 @@ func New(c *config.Config) *Mesos {
 		m.blacklistRegex = nil
 	}
 
-	m.taskTag = make(map[string]string)
-	for _, tt := range c.TaskTag {
-		parts := strings.Split(tt, ":")
-		if len(parts) == 2 {
-			log.WithField("task-tag", c.TaskTag).Debug("Using task-tag pattern")
-			m.taskTag[strings.ToLower(parts[0])] = parts[1]
-		} else {
-			log.WithField("task-tag", c.TaskTag).Fatal("task-tag pattern invalid, must include 1 colon separator")
-		}
+	var err error
+	m.taskTag, err = buildTaskTag(c.TaskTag)
+	if err != nil {
+		log.WithField("task-tag", c.TaskTag).Fatal(err.Error())
 	}
 
 	m.ServiceName = cleanName(c.ServiceName, c.Separator)
@@ -121,6 +116,31 @@ func New(c *config.Config) *Mesos {
 	}
 
 	return m
+}
+
+// buildTaskTag takes a slice of task-tag arguments from the command line
+// and returns a map of tasks name patterns to slice of tags that should be applied.
+func buildTaskTag(taskTag []string) (map[string][]string, error) {
+	result := make(map[string][]string)
+
+	for _, tt := range taskTag {
+		parts := strings.Split(tt, ":")
+		if len(parts) != 2 {
+			return nil, errors.New("task-tag pattern invalid, must include 1 colon separator")
+		}
+
+		taskName := strings.ToLower(parts[0])
+		log.WithField("task-tag", taskName).Debug("Using task-tag pattern")
+		tags := strings.Split(parts[1], ",")
+
+		if _, ok := result[taskName]; !ok {
+			result[taskName] = tags
+		} else {
+			result[taskName] = append(result[taskName], tags...)
+		}
+	}
+
+	return result, nil
 }
 
 func (m *Mesos) Refresh() error {
