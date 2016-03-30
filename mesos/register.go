@@ -143,7 +143,7 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 				Name:    tname,
 				Port:    toPort(servicePort),
 				Address: address,
-				Tags:    []string{serviceName},
+				Tags:    append(tags, serviceName),
 				Check: GetCheck(t, &CheckVar{
 					Host: toIP(address),
 					Port: servicePort,
