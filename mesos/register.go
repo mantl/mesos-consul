@@ -78,22 +78,6 @@ func (m *Mesos) RegisterHosts(s state.State) {
 	}
 }
 
-// helper function to compare service tag slices
-//
-func sliceEq(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-
-	return true
-}
-
 func (m *Mesos) registerHost(s *registry.Service) {
 	h := m.Registry.CacheLookup(s.ID)
 	if h != nil {
@@ -126,6 +110,13 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 			return
 		}
 	}
+	if m.blacklistRegex != nil {
+		if m.blacklistRegex.MatchString(tname) {
+			log.WithField("task", tname).Debug("Task on blacklist")
+			// Match
+			return
+		}
+	}
 
 	address := t.IP(m.IpOrder...)
 
@@ -135,6 +126,8 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 	} else {
 		tags = []string{}
 	}
+
+	tags = buildRegisterTaskTags(tname, tags, m.taskTag)
 
 	for key := range t.DiscoveryInfo.Ports.DiscoveryPorts {
 		discoveryPort := state.DiscoveryPort(t.DiscoveryInfo.Ports.DiscoveryPorts[key])
@@ -150,7 +143,7 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 				Name:    tname,
 				Port:    toPort(servicePort),
 				Address: address,
-				Tags:    []string{serviceName},
+				Tags:    append(tags, serviceName),
 				Check: GetCheck(t, &CheckVar{
 					Host: toIP(address),
 					Port: servicePort,
@@ -187,6 +180,26 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 			Agent: toIP(agent),
 		})
 	}
+}
+
+// buildRegisterTaskTags takes a cleaned task name, a slice of starting tags, and the processed
+// taskTag map and returns a slice of tags that should be applied to this task.
+func buildRegisterTaskTags(taskName string, startingTags []string, taskTag map[string][]string) []string {
+	result := startingTags
+	tnameLower := strings.ToLower(taskName)
+
+	for pattern, taskTags := range taskTag {
+		for _, tag := range taskTags {
+			if strings.Contains(tnameLower, pattern) {
+				if !sliceContainsString(result, tag) {
+					log.WithField("task-tag", tnameLower).Debug("Task matches pattern for tag")
+					result = append(result, tag)
+				}
+			}
+		}
+	}
+
+	return result
 }
 
 func (m *Mesos) agentTags(ts ...string) []string {

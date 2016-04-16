@@ -37,6 +37,9 @@ type Mesos struct {
 	IpOrder        []string
 	WhiteList      string
 	whitelistRegex *regexp.Regexp
+	BlackList      string
+	blacklistRegex *regexp.Regexp
+	taskTag        map[string][]string
 
 	Separator string
 
@@ -67,6 +70,27 @@ func New(c *config.Config) *Mesos {
 		m.whitelistRegex = nil
 	}
 
+	if len(c.BlackList) > 0 {
+		m.BlackList = strings.Join(c.BlackList, "|")
+		log.WithField("blacklist", m.BlackList).Debug("Using blacklist regex")
+		re, err := regexp.Compile(m.BlackList)
+		if err != nil {
+			// For now, exit if the regex fails to compile. If we read regexes from Consul
+			// maybe we emit a warning and use the old regex
+			//
+			log.WithField("blacklist", m.BlackList).Fatal("BlackList regex failed to compile")
+		}
+		m.blacklistRegex = re
+	} else {
+		m.blacklistRegex = nil
+	}
+
+	var err error
+	m.taskTag, err = buildTaskTag(c.TaskTag)
+	if err != nil {
+		log.WithField("task-tag", c.TaskTag).Fatal(err.Error())
+	}
+
 	m.ServiceName = cleanName(c.ServiceName, c.Separator)
 
 	m.Registry = consul.New()
@@ -92,6 +116,31 @@ func New(c *config.Config) *Mesos {
 	}
 
 	return m
+}
+
+// buildTaskTag takes a slice of task-tag arguments from the command line
+// and returns a map of tasks name patterns to slice of tags that should be applied.
+func buildTaskTag(taskTag []string) (map[string][]string, error) {
+	result := make(map[string][]string)
+
+	for _, tt := range taskTag {
+		parts := strings.Split(tt, ":")
+		if len(parts) != 2 {
+			return nil, errors.New("task-tag pattern invalid, must include 1 colon separator")
+		}
+
+		taskName := strings.ToLower(parts[0])
+		log.WithField("task-tag", taskName).Debug("Using task-tag pattern")
+		tags := strings.Split(parts[1], ",")
+
+		if _, ok := result[taskName]; !ok {
+			result[taskName] = tags
+		} else {
+			result[taskName] = append(result[taskName], tags...)
+		}
+	}
+
+	return result, nil
 }
 
 func (m *Mesos) Refresh() error {
@@ -135,17 +184,17 @@ func (m *Mesos) loadState() (state.State, error) {
 	log.Infof("Zookeeper leader: %s:%s", mh.Ip, mh.PortString)
 
 	log.Info("reloading from master ", mh.Ip)
-	sj = m.loadFromMaster(mh.Ip, mh.PortString)
+	sj, err = m.loadFromMaster(mh.Ip, mh.PortString)
 
 	if rip := leaderIP(sj.Leader); rip != mh.Ip {
 		log.Warn("master changed to ", rip)
-		sj = m.loadFromMaster(rip, mh.PortString)
+		sj, err = m.loadFromMaster(rip, mh.PortString)
 	}
 
 	return sj, err
 }
 
-func (m *Mesos) loadFromMaster(ip string, port string) (sj state.State) {
+func (m *Mesos) loadFromMaster(ip string, port string) (sj state.State, err error) {
 	url := "http://" + ip + ":" + port + "/master/state.json"
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -154,21 +203,21 @@ func (m *Mesos) loadFromMaster(ip string, port string) (sj state.State) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return
 	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		return
 	}
 
 	err = json.Unmarshal(body, &sj)
 	if err != nil {
-		log.Fatal(err)
+		return
 	}
 
-	return sj
+	return sj, nil
 }
 
 func (m *Mesos) parseState(sj state.State) {
