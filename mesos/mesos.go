@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
-	"regexp"
 	"strings"
 	"sync"
 
@@ -35,11 +34,11 @@ type Mesos struct {
 	startChan chan struct{}
 
 	IpOrder        []string
-	WhiteList      string
-	whitelistRegex *regexp.Regexp
-	BlackList      string
-	blacklistRegex *regexp.Regexp
 	taskTag        map[string][]string
+
+	// Whitelist/Blacklist privileges
+	TaskPrivilege *Privilege
+	FwPrivilege *Privilege
 
 	Separator string
 
@@ -55,35 +54,8 @@ func New(c *config.Config) *Mesos {
 	}
 	m.Separator = c.Separator
 
-	if len(c.WhiteList) > 0 {
-		m.WhiteList = strings.Join(c.WhiteList, "|")
-		log.WithField("whitelist", m.WhiteList).Debug("Using whitelist regex")
-		re, err := regexp.Compile(m.WhiteList)
-		if err != nil {
-			// For now, exit if the regex fails to compile. If we read regexes from Consul
-			// maybe we emit a warning and use the old regex
-			//
-			log.WithField("whitelist", m.WhiteList).Fatal("WhiteList regex failed to compile")
-		}
-		m.whitelistRegex = re
-	} else {
-		m.whitelistRegex = nil
-	}
-
-	if len(c.BlackList) > 0 {
-		m.BlackList = strings.Join(c.BlackList, "|")
-		log.WithField("blacklist", m.BlackList).Debug("Using blacklist regex")
-		re, err := regexp.Compile(m.BlackList)
-		if err != nil {
-			// For now, exit if the regex fails to compile. If we read regexes from Consul
-			// maybe we emit a warning and use the old regex
-			//
-			log.WithField("blacklist", m.BlackList).Fatal("BlackList regex failed to compile")
-		}
-		m.blacklistRegex = re
-	} else {
-		m.blacklistRegex = nil
-	}
+	m.TaskPrivilege = NewPrivilege(c.TaskWhiteList, c.TaskBlackList)
+	m.FwPrivilege = NewPrivilege(c.FwWhiteList, c.FwBlackList)
 
 	var err error
 	m.taskTag, err = buildTaskTag(c.TaskTag)
@@ -227,6 +199,9 @@ func (m *Mesos) parseState(sj state.State) {
 	log.Debug("Done running RegisterHosts")
 
 	for _, fw := range sj.Frameworks {
+		if !m.FwPrivilege.Allowed(fw.Name) {
+			continue
+		}
 		for _, task := range fw.Tasks {
 			agent, ok := m.Agents[task.SlaveID]
 			if ok && task.State == "TASK_RUNNING" {

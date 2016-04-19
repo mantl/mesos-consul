@@ -16,7 +16,7 @@ import (
 )
 
 const Name = "mesos-consul"
-const Version = "0.3.1"
+const Version = "0.4.0"
 
 func main() {
 	c, err := parseFlags(os.Args[1:])
@@ -68,13 +68,21 @@ func parseFlags(args []string) (*config.Config, error) {
 	flags.StringVar(&c.HealthcheckIp, "healthcheck-ip", "127.0.0.1", "")
 	flags.StringVar(&c.HealthcheckPort, "healthcheck-port", "24476", "")
 	flags.Var((funcVar)(func(s string) error {
-		c.WhiteList = append(c.WhiteList, s)
+		c.TaskWhiteList = append(c.TaskWhiteList, s)
 		return nil
 	}), "whitelist", "")
 	flags.Var((funcVar)(func(s string) error {
-		c.BlackList = append(c.BlackList, s)
+		c.TaskBlackList = append(c.TaskBlackList, s)
 		return nil
 	}), "blacklist", "")
+	flags.Var((funcVar)(func(s string) error {
+		c.FwWhiteList = append(c.FwWhiteList, s)
+		return nil
+	}), "fw-whitelist", "")
+	flags.Var((funcVar)(func(s string) error {
+		c.FwBlackList = append(c.FwBlackList, s)
+		return nil
+	}), "fw-blacklist", "")
 	flags.Var((funcVar)(func(s string) error {
 		c.TaskTag = append(c.TaskTag, s)
 		return nil
@@ -138,6 +146,12 @@ Options:
   --whitelist=<regex>		Only register services matching the provided regex. 
 				Can be specified multiple times
   --blacklist=<regex>		Do not register services matching the provided regex. 
+				Can be specified multiple times
+  --fw-whitelist=<regex>	Only register services from frameworks matching the provided
+				regex.
+				Can be specified multiple times
+  --fw-blacklist=<regex>	Do not register services from frameworks matching the provided
+				regex.
 				Can be specified multiple times
   --task-tag=<pattern:tag>	Tag tasks whose name contains 'pattern' substring (case-insensitive) with given tag.
 				Can be specified multiple times

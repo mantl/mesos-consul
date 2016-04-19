@@ -12,8 +12,10 @@ type Config struct {
 	Healthcheck     bool
 	HealthcheckIp   string
 	HealthcheckPort string
-	WhiteList       []string
-	BlackList       []string
+	TaskWhiteList   []string
+	TaskBlackList   []string
+	FwWhiteList     []string
+	FwBlackList     []string
 	TaskTag         []string
 	Separator       string
 
@@ -30,8 +32,10 @@ func DefaultConfig() *Config {
 		Healthcheck:     false,
 		HealthcheckIp:   "127.0.0.1",
 		HealthcheckPort: "24476",
-		WhiteList:       []string{},
-		BlackList:       []string{},
+		TaskWhiteList:   []string{},
+		TaskBlackList:   []string{},
+		FwWhiteList:     []string{},
+		FwBlackList:     []string{},
 		TaskTag:         []string{},
 		Separator:       "",
 		ServiceName:     "mesos",
