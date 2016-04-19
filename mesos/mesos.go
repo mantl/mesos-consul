@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/CiscoCloud/mesos-consul/config"
 	"github.com/CiscoCloud/mesos-consul/consul"
 	"github.com/CiscoCloud/mesos-consul/registry"
 	"github.com/CiscoCloud/mesos-consul/state"
@@ -16,6 +15,8 @@ import (
 	consulapi "github.com/hashicorp/consul/api"
 	proto "github.com/mesos/mesos-go/mesosproto"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/spf13/viper"
 )
 
 type CacheEntry struct {
@@ -46,24 +47,30 @@ type Mesos struct {
 	ServiceTags []string
 }
 
-func New(c *config.Config) *Mesos {
+func New() *Mesos {
 	m := new(Mesos)
 
-	if c.Zk == "" {
+	if viper.GetString("zk") == "" {
 		return nil
 	}
-	m.Separator = c.Separator
+	m.Separator = viper.GetString("group-separator")
 
-	m.TaskPrivilege = NewPrivilege(c.TaskWhiteList, c.TaskBlackList)
-	m.FwPrivilege = NewPrivilege(c.FwWhiteList, c.FwBlackList)
+	m.TaskPrivilege = NewPrivilege(
+		toSlice(viper.GetString("whitelist")),
+		toSlice(viper.GetString("blacklist")),
+		)
+	m.FwPrivilege = NewPrivilege(
+		toSlice(viper.GetString("fw-whitelist")),
+		toSlice(viper.GetString("fw-blacklist")),
+		)
 
 	var err error
-	m.taskTag, err = buildTaskTag(c.TaskTag)
+	m.taskTag, err = buildTaskTag(toSlice(viper.GetString("task-tag")))
 	if err != nil {
-		log.WithField("task-tag", c.TaskTag).Fatal(err.Error())
+		log.WithField("task-tag", viper.GetString("task-tag")).Fatal(err.Error())
 	}
 
-	m.ServiceName = cleanName(c.ServiceName, c.Separator)
+	m.ServiceName = cleanName(viper.GetString("service-name"), viper.GetString("group-separator"))
 
 	m.Registry = consul.New()
 
@@ -71,9 +78,9 @@ func New(c *config.Config) *Mesos {
 		log.Fatal("No registry specified")
 	}
 
-	m.zkDetector(c.Zk)
+	m.zkDetector(viper.GetString("zk"))
 
-	m.IpOrder = strings.Split(c.MesosIpOrder, ",")
+	m.IpOrder = strings.Split(viper.GetString("mesos-ip-order"), ",")
 	for _, src := range m.IpOrder {
 		switch src {
 		case "netinfo", "host", "docker", "mesos":
@@ -83,8 +90,8 @@ func New(c *config.Config) *Mesos {
 	}
 	log.Debugf("m.IpOrder = '%v'", m.IpOrder)
 
-	if c.ServiceTags != "" {
-		m.ServiceTags = strings.Split(c.ServiceTags, ",")
+	if st := viper.GetString("service-tags"); st != "" {
+		m.ServiceTags = strings.Split(st, ",")
 	}
 
 	return m

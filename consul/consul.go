@@ -9,6 +9,7 @@ import (
 
 	consulapi "github.com/hashicorp/consul/api"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 type Consul struct {
@@ -20,7 +21,17 @@ type Consul struct {
 func New() *Consul {
 	return &Consul{
 		agents: make(map[string]*consulapi.Client),
-		config: config,
+		config: consulConfig{
+			enabled: viper.GetBool("consul"),
+			auth: toAuth(viper.GetString("consul-auth")),
+			port: viper.GetString("consul-port"),
+			sslEnabled: viper.GetBool("consul-ssl"),
+			sslVerify: viper.GetBool("consul-ssl-verify"),
+			sslCert: viper.GetString("consul-ssl-cert"),
+			sslCaCert: viper.GetString("consul-ssl-cacert"),
+			token: viper.GetString("consul-token"),
+			heartbeatsBeforeRemove: viper.GetInt("heartbeats-before-remove"),
+		},
 	}
 }
 

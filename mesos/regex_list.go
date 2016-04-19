@@ -23,6 +23,8 @@ func NewRegexList(l []string) *RegexList {
 }
 
 func (rl *RegexList) Compile(l []string) {
+	log.WithField("l", l).Debug("Using regex list")
+	log.WithField("len(l)", len(l)).Debug("List length")
 	if len(l) > 0 {
 		lstring := strings.Join(l, "|")
 		log.WithField("regex_string", lstring).Debug("Using regex string")

@@ -3,169 +3,87 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
-	"github.com/CiscoCloud/mesos-consul/config"
 	"github.com/CiscoCloud/mesos-consul/consul"
 	"github.com/CiscoCloud/mesos-consul/mesos"
 
-	flag "github.com/ogier/pflag"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 const Name = "mesos-consul"
 const Version = "0.4.0"
 
 func main() {
-	c, err := parseFlags(os.Args[1:])
-	if err != nil {
-		log.Fatal(err)
+	root := &cobra.Command{
+		Use: "mesos-consul",
+		Short: "Mesos to Consul bridge for service discovery",
+		Long: "Mesos to Consul bridge for service discovery",
+		PreRun: func (cmd *cobra.Command, args []string) {
+			lev := viper.GetString("log-level")
+			l, err := log.ParseLevel(strings.ToLower(lev))
+			if err != nil {
+				log.SetLevel(log.WarnLevel)
+				log.Warnf("Invalid log level '%v'. Setting to WARN", )
+			} else {
+				log.SetLevel(l)
+			}
+		},
+		Run: func(cmd *cobra.Command, args []string) {
+			DoIt()
+		},
 	}
 
-	if c.Healthcheck {
-		go StartHealthcheckService(c)
+	root.Flags().Bool("version", false, "Print mesos-consul version")
+	root.Flags().String("log-level", "WARN", `Set the log level to one of ["DEBUG","INFO","WARN", "ERROR"]`)
+	root.Flags().Duration("refresh", time.Minute, "Set the Mesos refresh rate")
+	root.Flags().String("zk", "zk://127.0.0.1:2181/mesos", "Zookeeper path to Mesos")
+	root.Flags().String("group-separator", "", "Choose the group separator. Will replace _ in task names")
+	root.Flags().String("mesos-ip-order", "netinfo,mesos,host", "Comma separated list to control the order in which mesos-consul searches for the task IP address. Valid options are 'netinfo', 'mesos', 'docker' and 'host'")
+	root.Flags().Bool("healthcheck", false, "Enables the http endpoint for health checks")
+	root.Flags().String("healthcheck-ip", "127.0.0.1", "Health check interface IP")
+	root.Flags().String("healthcheck-port", "24476", "Health check interface Port")
+
+	root.Flags().StringSlice("whitelist", nil, "Only register services matching the provided regex. Can be specified multiple times")
+	root.Flags().StringSlice("blacklist", nil, "Do not register services matching the provided regex. Can be specified multiple times")
+	root.Flags().StringSlice("fw-whitelist", nil, "Only register services from frameworks matching the provided regex. Can be specified multiple times")
+	root.Flags().StringSlice("fw-blacklist", nil, "Do not register services from frameworks matching the provided regex. Can be specified multiple times")
+	root.Flags().StringSlice("task-tag", nil, "Tag tasks whose name contains 'pattern' substring (case-insensitive) with given tag. Can be specified multiple times")
+
+	root.Flags().String("service-name", "mesos", "Service name of the Mesos hosts")
+	root.Flags().String("service-tags", "", "Comma delimited list of tags to add to the mesos hosts. Hosts are registered as (leader|master|follower).<tag>.mesos.service.consul")
+
+	consul.InitFlags(root)
+
+	viper.BindPFlags(root.Flags())
+
+	root.Execute()
+}
+
+func DoIt() {
+	if viper.GetBool("healthcheck") {
+		go StartHealthcheckService(viper.GetString("healthcheck-ip"), viper.GetString("healthcheck-port"))
 	}
 
-	log.Info("Using zookeeper: ", c.Zk)
-	leader := mesos.New(c)
+	log.Info("Using zookeeper: ", viper.GetString("zk"))
+	leader := mesos.New()
 
-	ticker := time.NewTicker(c.Refresh)
+	ticker := time.NewTicker(viper.GetDuration("refresh"))
 	leader.Refresh()
 	for _ = range ticker.C {
 		leader.Refresh()
 	}
 }
 
-func StartHealthcheckService(c *config.Config) {
+func StartHealthcheckService(ip string, port string) {
 	http.HandleFunc("/health", HealthHandler)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%s", c.HealthcheckIp, c.HealthcheckPort), nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%s", ip, port), nil))
 }
 
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "OK")
 }
-
-func parseFlags(args []string) (*config.Config, error) {
-	var doHelp bool
-	var doVersion bool
-	var c = config.DefaultConfig()
-
-	flags := flag.NewFlagSet("mesos-consul", flag.ContinueOnError)
-	flags.Usage = func() {
-		fmt.Println(Help())
-	}
-
-	flags.BoolVar(&doHelp, "help", false, "")
-	flags.BoolVar(&doVersion, "version", false, "")
-	flags.StringVar(&c.LogLevel, "log-level", "WARN", "")
-	flags.DurationVar(&c.Refresh, "refresh", time.Minute, "")
-	flags.StringVar(&c.Zk, "zk", "zk://127.0.0.1:2181/mesos", "")
-	flags.StringVar(&c.Separator, "group-separator", "", "")
-	flags.StringVar(&c.MesosIpOrder, "mesos-ip-order", "netinfo,mesos,host", "")
-	flags.BoolVar(&c.Healthcheck, "healthcheck", false, "")
-	flags.StringVar(&c.HealthcheckIp, "healthcheck-ip", "127.0.0.1", "")
-	flags.StringVar(&c.HealthcheckPort, "healthcheck-port", "24476", "")
-	flags.Var((funcVar)(func(s string) error {
-		c.TaskWhiteList = append(c.TaskWhiteList, s)
-		return nil
-	}), "whitelist", "")
-	flags.Var((funcVar)(func(s string) error {
-		c.TaskBlackList = append(c.TaskBlackList, s)
-		return nil
-	}), "blacklist", "")
-	flags.Var((funcVar)(func(s string) error {
-		c.FwWhiteList = append(c.FwWhiteList, s)
-		return nil
-	}), "fw-whitelist", "")
-	flags.Var((funcVar)(func(s string) error {
-		c.FwBlackList = append(c.FwBlackList, s)
-		return nil
-	}), "fw-blacklist", "")
-	flags.Var((funcVar)(func(s string) error {
-		c.TaskTag = append(c.TaskTag, s)
-		return nil
-	}), "task-tag", "")
-	flags.StringVar(&c.ServiceName, "service-name", "mesos", "")
-	flags.StringVar(&c.ServiceTags, "service-tags", "", "")
-
-	consul.AddCmdFlags(flags)
-
-	if err := flags.Parse(args); err != nil {
-		return nil, err
-	}
-
-	args = flags.Args()
-	if len(args) > 0 {
-		return nil, fmt.Errorf("extra argument(s): %q", args)
-	}
-
-	if doVersion {
-		fmt.Printf("%s v%s\n", Name, Version)
-		os.Exit(0)
-	}
-	if doHelp {
-		flags.Usage()
-		os.Exit(0)
-	}
-
-	l, err := log.ParseLevel(strings.ToLower(c.LogLevel))
-	if err != nil {
-		log.SetLevel(log.WarnLevel)
-		log.Warnf("Invalid log level '%v'. Setting to WARN", c.LogLevel)
-	} else {
-		log.SetLevel(l)
-	}
-
-	return c, nil
-}
-
-func Help() string {
-	helpText := `
-Usage: mesos-consul [options]
-
-Options:
-
-  --version 			Print mesos-consul version
-  --log-level=<log_level>	Set the Logging level to one of [ "DEBUG", "INFO", "WARN", "ERROR" ]
-				(default "WARN")
-  --refresh=<time>		Set the Mesos refresh rate (default 1m)
-  --zk=<address>		Zookeeper path to Mesos (default zk://127.0.0.1:2181/mesos)
-  --group-separator=<separator> Choose the group separator. Will replace _ in task names (default is empty)
-  --healthcheck 		Enables a http endpoint for health checks. When this
-				flag is enabled, serves a service health status on 127.0.0.1:24476 (default not enabled)
-  --healthcheck-ip=<ip> 	Health check interface ip (default 127.0.0.1)
-  --healthcheck-port=<port>	Health check service port (default 24476)
-  --mesos-ip-order		Comma separated list to control the order in
-				which github.com/CiscoCloud/mesos-consul searches for the task IP
-				address. Valid options are 'netinfo', 'mesos', 'docker' and 'host'
-				(default netinfo,mesos,host)
-  --heartbeats-before-remove	Number of times that registration needs to fail before removing
-				task from Consul. (default: 1)
-  --whitelist=<regex>		Only register services matching the provided regex. 
-				Can be specified multiple times
-  --blacklist=<regex>		Do not register services matching the provided regex. 
-				Can be specified multiple times
-  --fw-whitelist=<regex>	Only register services from frameworks matching the provided
-				regex.
-				Can be specified multiple times
-  --fw-blacklist=<regex>	Do not register services from frameworks matching the provided
-				regex.
-				Can be specified multiple times
-  --task-tag=<pattern:tag>	Tag tasks whose name contains 'pattern' substring (case-insensitive) with given tag.
-				Can be specified multiple times
-  --service-name=<name>		Service name of the Mesos hosts. (default: mesos)
-  --service-tags=<tag>,...	Comma delimited list of tags to add to the mesos hosts
-				Hosts are registered as
-				(leader|master|follower).<tag>.mesos.service.conul
-` + consul.Help()
-
-	return strings.TrimSpace(helpText)
-}
-
-type funcVar func(s string) error
-
-func (f funcVar) Set(s string) error { return f(s) }
-func (f funcVar) String() string     { return "" }
-func (f funcVar) IsBoolFlag() bool   { return false }

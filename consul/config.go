@@ -1,10 +1,9 @@
 package consul
 
 import (
-	"fmt"
 	"strings"
 
-	flag "github.com/ogier/pflag"
+	"github.com/spf13/cobra"
 )
 
 type consulConfig struct {
@@ -21,48 +20,16 @@ type consulConfig struct {
 
 var config consulConfig
 
-func AddCmdFlags(f *flag.FlagSet) {
-	f.BoolVar(&config.enabled, "consul", false, "")
-	f.StringVar(&config.port, "consul-port", "8500", "")
-	f.Var((*authVar)(&config.auth), "consul-auth", "")
-	f.BoolVar(&config.sslEnabled, "consul-ssl", false, "")
-	f.BoolVar(&config.sslVerify, "consul-ssl-verify", true, "")
-	f.StringVar(&config.sslCert, "consul-ssl-cert", "", "")
-	f.StringVar(&config.sslCaCert, "consul-ssl-cacert", "", "")
-	f.StringVar(&config.token, "consul-token", "", "")
-	f.IntVar(&config.heartbeatsBeforeRemove, "heartbeats-before-remove", 1, "")
-}
-
-func Help() string {
-	helpText := `
-Consul Options:
-
-  --consul			Use Consul backend
-  --consul-port			Consul agent API port
-				(default: 8500)
-  --consul-auth			The basic authentication username (and optional password),
-				separated by a colon.
-				(default: not set)
-  --consul-ssl			Use HTTPS when talking to Consul
-				(default: false)
-  --consul-ssl-verify		Verify certificates when connecting via SSL
-				(default: true)
-  --consul-ssl-cert		Path to an SSL client certificate to use to authenticate
-				to the Consul server
-				(default: not set)
-  --consul-ssl-cacert		Path to a CA certificate file, containing one or more CA
-				certificates to use to validate the certificate sent
-				by the Consul server to us
-				(default: not set)
-  --consul-token		The Consul ACL token
-				(default: not set)
-  --heartbeats-before-remove	Number of times that registration needs to fail
-				before removing task from Consul
-				(default: 1)
-
-`
-
-	return helpText
+func InitFlags(cmd *cobra.Command) {
+	cmd.Flags().Bool("consul", false, "Use Consul backend")
+	cmd.Flags().String("consul-port", "8500", "Consul agent API port")
+	cmd.Flags().String("consul-auth", "", "The basic authentication username (and optional password) separated by a colon")
+	cmd.Flags().Bool("consul-ssl", false, "Use HTTPS when talking to Consul")
+	cmd.Flags().Bool("consul-ssl-verify", true, "Verify certificates when connecting via SSL")
+	cmd.Flags().String("consul-ssl-cert", "", "Path to an SSL client certificate to use to authenticate to the Consul server")
+	cmd.Flags().String("consul-ssl-cacert", "", "Path to a CA certificate file, containing one or more CA certificates to use to validate the certificate sent by the Consul server to us")
+	cmd.Flags().String("consul-token", "", "The Consul ACL token")
+	cmd.Flags().Int("heartbeats-before-remove", 1, "Number of times that registration needs to fail before removing task from Consul")
 }
 
 type auth struct {
@@ -71,28 +38,18 @@ type auth struct {
 	Password string
 }
 
-// AuthVar implements the Flag.Value interface and allows the user to specify
-// authentication in the username[:password] form.
-type authVar auth
+func toAuth(s string) auth {
+	var a auth
 
-func (a *authVar) Set(value string) error {
 	a.Enabled = true
 
-	if strings.Contains(value, ":") {
-		split := strings.SplitN(value, ":", 2)
+	if strings.Contains(s, ":") {
+		split := strings.SplitN(s, ":", 2)
 		a.Username = split[0]
 		a.Password = split[1]
 	} else {
-		a.Username = value
+		a.Username = s
 	}
 
-	return nil
-}
-
-func (a *authVar) String() string {
-	if a.Password == "" {
-		return a.Username
-	}
-
-	return fmt.Sprintf("%s:%s", a.Username, a.Password)
+	return a
 }

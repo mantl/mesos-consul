@@ -78,3 +78,11 @@ func toPort(p string) int {
 
 	return ps
 }
+
+func toSlice(s string) []string {
+	s = strings.Trim(s, "[]")
+	if s == "" {
+		return []string{}
+	}
+	return strings.Split(s, ",")
+}
