@@ -276,4 +276,18 @@ type DiscoveryPort struct {
 	Protocol string `json:"protocol"`
 	Number   int    `json:"number"`
 	Name     string `json:"name"`
+	Labels   struct {
+		Labels []Label `json:"labels"`
+	} `json:"labels"`
+}
+
+// Label returns the label.Value of the key matching the passed in string
+func (p *DiscoveryPort) Label(name string) string {
+	for _, l := range p.Labels.Labels {
+		if l.Key == name {
+			return l.Value
+		}
+	}
+
+	return ""
 }

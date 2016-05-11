@@ -120,6 +120,7 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 	tags = buildRegisterTaskTags(tname, tags, m.taskTag)
 
 	for key := range t.DiscoveryInfo.Ports.DiscoveryPorts {
+		var porttags []string
 		discoveryPort := state.DiscoveryPort(t.DiscoveryInfo.Ports.DiscoveryPorts[key])
 		serviceName := discoveryPort.Name
 		servicePort := strconv.Itoa(discoveryPort.Number)
@@ -127,13 +128,19 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 			t.Name,
 			discoveryPort.Name,
 			discoveryPort.Number)
+		pl := discoveryPort.Label("tags")
+		if pl != "" {
+			porttags = strings.Split(discoveryPort.Label("tags"), ",")
+		} else {
+			porttags = []string{}
+		}
 		if discoveryPort.Name != "" {
 			m.Registry.Register(&registry.Service{
 				ID:      fmt.Sprintf("mesos-consul:%s:%s:%d", agent, tname, discoveryPort.Number),
 				Name:    tname,
 				Port:    toPort(servicePort),
 				Address: address,
-				Tags:    append(tags, serviceName),
+				Tags:    append(append(tags, serviceName), porttags...),
 				Check: GetCheck(t, &CheckVar{
 					Host: toIP(address),
 					Port: servicePort,
