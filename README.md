@@ -161,9 +161,12 @@ This will result in a service `tagging-test` being created in consul with 3 sepa
   }
 ]
 ```
+#### Override Task Name
+
+By adding a label `overrideTaskName` with an arbitrary value, the value is used as the service name during consul registration.
+Tags are preserved.
 
 ## Todo
 
   * Use task labels for metadata
   * Support for multiple port tasks^
-  * Override Marathon Taskname
