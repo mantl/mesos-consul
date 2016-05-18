@@ -165,4 +165,5 @@ This will result in a service `tagging-test` being created in consul with 3 sepa
 ## Todo
 
   * Use task labels for metadata
-  * Support for multiple port tasks
+  * Support for multiple port tasks^
+  * Override Marathon Taskname
