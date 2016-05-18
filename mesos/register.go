@@ -103,10 +103,10 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 	var tags []string
 
 	tname := cleanName(t.Name, m.Separator)
-        log.Infof("original TaskName : (%v)", tname)
+        log.Debugf("original TaskName : (%v)", tname)
 	if t.Label("overrideTaskName") != "" {
 		tname = cleanName(t.Label("overrideTaskName"), m.Separator)
-		log.Infof("overrideTaskName to : (%v)", tname)
+		log.Debugf("overrideTaskName to : (%v)", tname)
 	}
 	if !m.TaskPrivilege.Allowed(tname) {
 		// Task not allowed to be registered
