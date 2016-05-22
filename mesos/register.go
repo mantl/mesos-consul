@@ -125,6 +125,14 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 	tags = buildRegisterTaskTags(tname, tags, m.taskTag)
 
 	for key := range t.DiscoveryInfo.Ports.DiscoveryPorts {
+		// We append -portN to ports after the first.
+		// This is done to preserve compatibility with
+		// existing implementations which may rely on the
+		// old unprefixed name.
+		svcName := tname
+		if key > 0 {
+			svcName = fmt.Sprintf("%s-port%d", svcName, key+1)
+		}
 		discoveryPort := state.DiscoveryPort(t.DiscoveryInfo.Ports.DiscoveryPorts[key])
 		serviceName := discoveryPort.Name
 		servicePort := strconv.Itoa(discoveryPort.Number)
@@ -134,8 +142,8 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 			discoveryPort.Number)
 		if discoveryPort.Name != "" {
 			m.Registry.Register(&registry.Service{
-				ID:      fmt.Sprintf("mesos-consul:%s:%s:%d", agent, tname, discoveryPort.Number),
-				Name:    tname,
+				ID:      fmt.Sprintf("mesos-consul:%s:%s:%d", agent, svcName, discoveryPort.Number),
+				Name:    svcName,
 				Port:    toPort(servicePort),
 				Address: address,
 				Tags:    append(tags, serviceName),
@@ -149,10 +157,18 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 	}
 
 	if t.Resources.PortRanges != "" {
-		for _, port := range t.Resources.Ports() {
+		for key, port := range t.Resources.Ports() {
+			// We append -portN to ports after the first.
+			// This is done to preserve compatibility with
+			// existing implementations which may rely on the
+			// old unprefixed name.
+			svcName := tname
+			if key > 0 {
+				svcName = fmt.Sprintf("%s-port%d", svcName, key+1)
+			}
 			m.Registry.Register(&registry.Service{
-				ID:      fmt.Sprintf("mesos-consul:%s:%s:%s", agent, tname, port),
-				Name:    tname,
+				ID:      fmt.Sprintf("mesos-consul:%s:%s:%s", agent, svcName, port),
+				Name:    svcName,
 				Port:    toPort(port),
 				Address: address,
 				Tags:    tags,
