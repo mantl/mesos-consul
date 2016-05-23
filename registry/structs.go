@@ -5,6 +5,8 @@ type Check struct {
 	TTL      string
 	HTTP     string
 	Interval string
+	TCP      string
+	Timeout  string
 }
 
 type Service struct {
@@ -34,5 +36,7 @@ func DefaultCheck() *Check {
 		Script:   "",
 		HTTP:     "",
 		Interval: "",
+		TCP:      "",
+		Timeout:  "",
 	}
 }

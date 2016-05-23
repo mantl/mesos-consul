@@ -112,6 +112,8 @@ func (c *Consul) Register(service *registry.Service) {
 			Script:   service.Check.Script,
 			HTTP:     service.Check.HTTP,
 			Interval: service.Check.Interval,
+			TCP:      service.Check.TCP,
+			Timeout:  service.Check.Timeout,
 		},
 	}
 
