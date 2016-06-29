@@ -89,6 +89,7 @@ func parseFlags(args []string) (*config.Config, error) {
 	}), "task-tag", "")
 	flags.StringVar(&c.ServiceName, "service-name", "mesos", "")
 	flags.StringVar(&c.ServiceTags, "service-tags", "", "")
+	flags.StringVar(&c.ServiceIdPrefix, "service-id-prefix", "mesos-consul", "")
 
 	consul.AddCmdFlags(flags)
 

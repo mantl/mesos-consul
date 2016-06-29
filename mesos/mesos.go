@@ -33,17 +33,18 @@ type Mesos struct {
 	started   sync.Once
 	startChan chan struct{}
 
-	IpOrder        []string
-	taskTag        map[string][]string
+	IpOrder []string
+	taskTag map[string][]string
 
 	// Whitelist/Blacklist privileges
 	TaskPrivilege *Privilege
-	FwPrivilege *Privilege
+	FwPrivilege   *Privilege
 
 	Separator string
 
-	ServiceName string
-	ServiceTags []string
+	ServiceName     string
+	ServiceTags     []string
+	ServiceIdPrefix string
 }
 
 func New(c *config.Config) *Mesos {
@@ -86,6 +87,8 @@ func New(c *config.Config) *Mesos {
 	if c.ServiceTags != "" {
 		m.ServiceTags = strings.Split(c.ServiceTags, ",")
 	}
+
+	m.ServiceIdPrefix = c.ServiceIdPrefix
 
 	return m
 }
