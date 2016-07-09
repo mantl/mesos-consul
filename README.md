@@ -108,6 +108,7 @@ You can add options to authenticate via basic http or Consul token.
 | `service-tags=<tag>,...` | Comma delimited list of tags to register the Mesos hosts. Mesos hosts will be registered as (leader|master|follower).<tag>.<service>.service.consul
 | `task-tag=<pattern:tag>` | Tag tasks matching pattern with given tag. Can be specified multitple times
 | `zk`\*                 | Location of the Mesos path in Zookeeper. The default value is zk://127.0.0.1:2181/mesos
+| `log-level`            | Level that mesos-consul should log at. Options are [ "DEBUG", "INFO", "WARN", "ERROR" ]. Default is WARN. |
 | `group-separator`      | Choose the group separator. Will replace _ in task names (default is empty)
 
 
