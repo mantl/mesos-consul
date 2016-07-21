@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/CiscoCloud/mesos-consul/registry"
@@ -40,13 +41,15 @@ func (c *Consul) CacheCreate() bool {
 
 // Initialize the service cache
 //
-func (c *Consul) CacheLoad(host string) error {
+func (c *Consul) CacheLoad(host, serviceIdPrefix string) error {
 	client := c.client(host).Catalog()
 
 	serviceList, _, err := client.Services(nil)
 	if err != nil {
 		return err
 	}
+
+	searchStr := fmt.Sprintf("%s:", serviceIdPrefix)
 
 	for service, _ := range serviceList {
 		catalogServices, _, err := client.Service(service, "", nil)
@@ -55,7 +58,7 @@ func (c *Consul) CacheLoad(host string) error {
 		}
 
 		for _, s := range catalogServices {
-			if strings.HasPrefix(s.ServiceID, "mesos-consul:") {
+			if strings.HasPrefix(s.ServiceID, searchStr) {
 				log.Debugf("Found '%s' with ID '%s'", s.ServiceName, s.ServiceID)
 				serviceCache[s.ServiceID] = newCacheEntry(&consulapi.AgentServiceRegistration{
 					ID:      s.ServiceID,
