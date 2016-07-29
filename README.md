@@ -39,26 +39,26 @@ Benefits of using Consul:
 * Multi-DC DNS lookups
 * Configurable health checks that run on each system
 
-
 ### [Registrator](https://github.com/gliderlabs/registrator)
 
 Registrator is another tool that populates Consul (and other backends like etcd) with the status of Docker containers. However, Registrator is currently limited to reporting on Docker containers and does not track Mesos tasks.
 
-## Building
+
+## Building and running mesos-consul
+
+### Building and running in Docker
+Mesos-consul can be run in a Docker container via Marathon. 
+
+To build the Docker image, do:
 ```
 docker build -t mesos-consul .
 ```
-
-## Running
-Mesos-consul can be run in a Docker container via Marathon. If your Zookeeper and Marathon services are registered in consul, you can use `.service.consul` to find them, otherwise change the vaules for your environment:
-
-
+To run mesos-consul, start the docker image within Mesos. If your Zookeeper and Marathon services are registered in consul, you can use `.service.consul` to find them, otherwise change the vaules for your environment:
 ```
 curl -X POST -d@mesos-consul.json -H "Content-Type: application/json" http://marathon.service.consul:8080/v2/apps'
 ```
 
 Where `mesos-consul.json` is similar to (replacing the image with your image):
-
 ```
 {
   "args": [
@@ -76,11 +76,21 @@ Where `mesos-consul.json` is similar to (replacing the image with your image):
   "cpus": 0.1,
   "mem": 256
 }
-
-
 ```
 
 You can add options to authenticate via basic http or Consul token.
+
+### Building and running as a service on the Marathon instance
+
+If you don't want to use Docker, it is possible to compile the binary and run it on a Marathon / Mesos master server.
+
+To build it:
+* ensure that Go is installed on the build server
+* make sure GOPATH is set
+* clone this repository and cd into it
+* run `make`
+* the binary will be created at bin/mesos-consul
+* copy this to the Marathon server and start it with `mesos-consul --zk=zk://zookeeper.service.consul:2181/mesos`
 
 
 ## Usage
