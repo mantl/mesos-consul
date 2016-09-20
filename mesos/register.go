@@ -124,8 +124,6 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 		tags = []string{}
 	}
 
-	tags = buildRegisterTaskTags(tname, tags, m.taskTag)
-
 	for key := range t.DiscoveryInfo.Ports.DiscoveryPorts {
 		var porttags []string
 		discoveryPort := state.DiscoveryPort(t.DiscoveryInfo.Ports.DiscoveryPorts[key])
@@ -141,10 +139,15 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 		} else {
 			porttags = []string{}
 		}
+		tnamePort := tname
+		if discoveryPort.Label("overrideTaskName") != "" {
+			tnamePort = discoveryPort.Label("overrideTaskName")
+		}
+		tags = buildRegisterTaskTags(tnamePort, tags, m.taskTag)
 		if discoveryPort.Name != "" {
 			m.Registry.Register(&registry.Service{
-				ID:      fmt.Sprintf("%s:%s:%s:%s:%d", m.ServiceIdPrefix, agent, tname, address, discoveryPort.Number),
-				Name:    tname,
+				ID:      fmt.Sprintf("%s:%s:%s:%s:%d", m.ServiceIdPrefix, agent, tnamePort, address, discoveryPort.Number),
+				Name:    tnamePort,
 				Port:    toPort(servicePort),
 				Address: address,
 				Tags:    append(append(tags, serviceName), porttags...),
@@ -158,7 +161,8 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 		}
 	}
 
-	if t.Resources.PortRanges != "" {
+	if !registered && t.Resources.PortRanges != "" {
+		tags = buildRegisterTaskTags(tname, tags, m.taskTag)
 		for _, port := range t.Resources.Ports() {
 			m.Registry.Register(&registry.Service{
 				ID:      fmt.Sprintf("%s:%s:%s:%s:%s", m.ServiceIdPrefix, agent, tname, address, port),
