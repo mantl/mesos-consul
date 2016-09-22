@@ -3,6 +3,7 @@ package consul
 import (
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -51,8 +52,21 @@ func (c *Consul) newAgent(address string) *consulapi.Client {
 	}
 
 	config := consulapi.DefaultConfig()
+	agentAddress := address
 
-	config.Address = fmt.Sprintf("%s:%s", address, c.config.port)
+	// test if address is an ip
+	ip := net.ParseIP(agentAddress)
+	if ip != nil {
+		ipv4 := ip.To4()
+		log.Debugf("agentAddress is an ip address %s", agentAddress)
+		// if not an ipv4 address assume ipv6 and add [ ] to address
+		if ipv4 == nil {
+			agentAddress = fmt.Sprintf("[%s]", agentAddress)
+			log.Debugf("agentAddress is ipv6 address %s", agentAddress)
+		}
+	}
+
+	config.Address = fmt.Sprintf("%s:%s", agentAddress, c.config.port)
 	log.Debugf("consul address: %s", config.Address)
 
 	config.HttpClient.Timeout = time.Duration(c.config.timeout) * time.Second

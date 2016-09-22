@@ -2,6 +2,7 @@ package consul
 
 import (
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/CiscoCloud/mesos-consul/registry"
@@ -17,8 +18,22 @@ type cacheEntry struct {
 }
 
 func newCacheEntry(service *consulapi.AgentServiceRegistration, agent string) *cacheEntry {
+
+	// test if address is an ip
+	agentAddress := agent
+	ip := net.ParseIP(agentAddress)
+	if ip != nil {
+		ipv4 := ip.To4()
+		log.Debugf("agentAddress is an ip address %s", agentAddress)
+		// if not an ipv4 address assume ipv6 and add [ ] to address
+		if ipv4 == nil {
+			agentAddress = fmt.Sprintf("[%s]", agentAddress)
+			log.Debugf("agentAddress is ipv6 address %s", agentAddress)
+		}
+	}
+
 	return &cacheEntry{
-		agent:           agent,
+		agent:           agentAddress,
 		service:         service,
 		validityCounter: 0,
 	}
