@@ -130,16 +130,6 @@ func (t *Task) Label(name string) string {
 	return ""
 }
 
-// RemoveLabel removes given label from task
-func (t *Task) RemoveLabel(name string) {
-	for i, l := range t.Labels {
-		if l.Key == name {
-			t.Labels = append(t.Labels[:i], t.Labels[i+1:]...)
-			break
-		}
-	}
-}
-
 // sources maps the string representation of IP sources to their functions.
 var sources = map[string]func(*Task) []string{
 	"host":    hostIPs,

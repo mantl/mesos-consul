@@ -122,8 +122,6 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 	if m.ServicePortLabel != "" {
 		p := t.Label(m.ServicePortLabel)
 		if p != "" {
-			// remove markup tag from list
-			t.RemoveLabel(m.ServicePortLabel)
 			ps := strings.Split(p, ",")
 			if len(ps) > 0 {
 				registerPorts = make(map[int]struct{}, 0)
