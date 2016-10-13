@@ -117,6 +117,26 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 
 	address := t.IP(m.IpOrder...)
 
+	// build a map to indicate public ports
+	var registerPorts map[int]struct{}
+	if m.ServicePortLabel != "" {
+		p := t.Label(m.ServicePortLabel)
+		if p != "" {
+			// remove markup tag from list
+			t.RemoveLabel(m.ServicePortLabel)
+			ps := strings.Split(p, ",")
+			if len(ps) > 0 {
+				registerPorts = make(map[int]struct{}, 0)
+				for _, pv := range ps {
+					pi, err := strconv.Atoi(pv)
+					if err == nil {
+						registerPorts[pi] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+
 	l := t.Label("tags")
 	if l != "" {
 		tags = strings.Split(t.Label("tags"), ",")
@@ -159,7 +179,11 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 	}
 
 	if t.Resources.PortRanges != "" {
-		for _, port := range t.Resources.Ports() {
+		for i, port := range t.Resources.Ports() {
+			// do not register port if explicit port label was found
+			if _, ok := registerPorts[i]; len(registerPorts) > 0 && !ok {
+				continue
+			}
 			m.Registry.Register(&registry.Service{
 				ID:      fmt.Sprintf("%s:%s:%s:%s:%s", m.ServiceIdPrefix, agent, tname, address, port),
 				Name:    tname,
