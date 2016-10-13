@@ -126,6 +126,7 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 			if len(ps) > 0 {
 				registerPorts = make(map[int]struct{}, 0)
 				for _, pv := range ps {
+					pv = strings.TrimSpace(pv)
 					pi, err := strconv.Atoi(pv)
 					if err == nil {
 						registerPorts[pi] = struct{}{}
