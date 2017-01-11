@@ -100,7 +100,7 @@ func (c *Consul) Register(service *registry.Service) {
 	}
 
 	if c.config.dryRun {
-		log.Info("Dry run, not registering: %s", service.ID)
+		log.Info("Dry run, not registering ", service.ID)
 		return
 	}
 
