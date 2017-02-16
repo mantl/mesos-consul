@@ -3,25 +3,17 @@ NAME = $(shell awk -F\" '/^const Name/ { print $$2 }' main.go)
 VERSION = $(shell awk -F\" '/^const Version/ { print $$2 }' main.go)
 DEPS = $(shell go list -f '{{range .TestImports}}{{.}} {{end}}' ./...)
 
-all: deps build
+all: build
 
-deps:
-	go get -d -v ./...
-	echo $(DEPS) | xargs -n1 go get -d
-
-updatedeps:
-	go get -u -v ./...
-	echo $(DEPS) | xargs -n1 go get -d
-
-build: deps
+build:
 	@mkdir -p bin/
 	go build -o bin/$(NAME)
 
-test: deps
+test:
 	go test $(TEST) $(TESTARGS) -timeout=30s -parallel=4
 	go vet $(TEST)
 
-xcompile: deps test
+xcompile: test
 	@rm -rf build/
 	@mkdir -p build
 	gox \
@@ -42,4 +34,11 @@ package: xcompile
 		echo $$f; \
 	done
 
-.PHONY: all deps updatedeps build test xcompile package
+vendor:
+	glide install --strip-vendor
+	glide update --strip-vendor
+
+vendor-clean:
+	-rm -rf vendor/
+
+.PHONY: all updatedeps build test xcompile package vendor vendor-clean
