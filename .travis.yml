@@ -13,4 +13,4 @@ install:
   - glide install
   - make vendor
 
-script: go test -v ${glide nv}
+script: make test
