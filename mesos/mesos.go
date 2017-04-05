@@ -14,7 +14,7 @@ import (
 	"github.com/CiscoCloud/mesos-consul/state"
 
 	consulapi "github.com/hashicorp/consul/api"
-	proto "github.com/mesos/mesos-go/mesosproto"
+	proto "github.com/mesos/mesos-go/api/v0/mesosproto"
 	log "github.com/sirupsen/logrus"
 )
 
