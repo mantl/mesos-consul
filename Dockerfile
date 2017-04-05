@@ -2,13 +2,15 @@ FROM alpine:3.5
 
 MAINTAINER Chris Aubuchon <Chris.Aubuchon@gmail.com>
 
-COPY . /go/src/github.com/CiscoCloud/mesos-consul
-RUN apk add --update go git mercurial \
+COPY . /mesos-consul-source
+RUN apk add --update gcc g++ go git mercurial \
+	&& mkdir -p /go/src/github.com/CiscoCloud \
+	&& cp -a /mesos-consul-source /go/src/github.com/CiscoCloud/mesos-consul \
 	&& cd /go/src/github.com/CiscoCloud/mesos-consul \
 	&& export GOPATH=/go \
 	&& go get \
 	&& go build -o /bin/mesos-consul \
-	&& rm -rf /go \
-	&& apk del --purge go git mercurial
+	&& apk del --purge gcc g++ go git mercurial \
+	&& rm -rf /go
 
 ENTRYPOINT [ "/bin/mesos-consul" ]
