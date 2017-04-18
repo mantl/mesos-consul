@@ -39,6 +39,7 @@ type Mesos struct {
 	ServiceName     string
 	ServiceTags     []string
 	ServiceIdPrefix string
+	LeaderTags      []string
 }
 
 func New(c *config.Config) *Mesos {
@@ -83,6 +84,9 @@ func New(c *config.Config) *Mesos {
 	}
 
 	m.ServiceIdPrefix = c.ServiceIdPrefix
+	if c.LeaderTags != "" {
+		m.LeaderTags = strings.Split(c.LeaderTags, ",")
+	}
 
 	return m
 }

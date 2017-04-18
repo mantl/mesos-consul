@@ -90,6 +90,7 @@ func parseFlags(args []string) (*config.Config, error) {
 	flags.StringVar(&c.ServiceName, "service-name", "mesos", "")
 	flags.StringVar(&c.ServiceTags, "service-tags", "", "")
 	flags.StringVar(&c.ServiceIdPrefix, "service-id-prefix", "mesos-consul", "")
+	flags.StringVar(&c.LeaderTags, "leader-tags", "", "")
 
 	consul.AddCmdFlags(flags)
 
@@ -158,6 +159,7 @@ Options:
 				Can be specified multiple times
   --service-name=<name>		Service name of the Mesos hosts. (default: mesos)
   --service-tags=<tag>,...	Comma delimited list of tags to add to the mesos hosts
+  --leader-tags=<tag>,...	Comma delimited list of tags to add to the mesos leader
 				Hosts are registered as
 				(leader|master|follower).<tag>.mesos.service.conul
 ` + consul.Help()
