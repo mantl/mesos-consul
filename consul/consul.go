@@ -99,6 +99,11 @@ func (c *Consul) Register(service *registry.Service) {
 		return
 	}
 
+	if c.config.dryRun {
+		log.Info("Dry run, not registering ", service.ID)
+		return
+	}
+
 	if _, ok := c.agents[service.Agent]; !ok {
 		// Agent connection not saved. Connect.
 		c.agents[service.Agent] = c.newAgent(service.Agent)
