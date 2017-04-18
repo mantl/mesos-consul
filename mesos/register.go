@@ -141,10 +141,14 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 		} else {
 			porttags = []string{}
 		}
+		tnamePort := tname
+		if discoveryPort.Label("overrideTaskName") != "" {
+			tnamePort = discoveryPort.Label("overrideTaskName")
+		}
 		if discoveryPort.Name != "" {
 			m.Registry.Register(&registry.Service{
-				ID:      fmt.Sprintf("%s:%s:%s:%s:%d", m.ServiceIdPrefix, agent, tname, address, discoveryPort.Number),
-				Name:    tname,
+				ID:      fmt.Sprintf("%s:%s:%s:%s:%d", m.ServiceIdPrefix, agent, tnamePort, address, discoveryPort.Number),
+				Name:    tnamePort,
 				Port:    toPort(servicePort),
 				Address: address,
 				Tags:    append(append(tags, serviceName), porttags...),
