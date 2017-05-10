@@ -1,14 +1,13 @@
-FROM gliderlabs/alpine:3.4
+FROM golang:1.7.5-alpine3.5
 
 MAINTAINER Chris Aubuchon <Chris.Aubuchon@gmail.com>
 
 COPY . /go/src/github.com/CiscoCloud/mesos-consul
-RUN apk add --update go git mercurial \
+RUN apk add --update make git glide \
 	&& cd /go/src/github.com/CiscoCloud/mesos-consul \
-	&& export GOPATH=/go \
-	&& go get \
+	&& make vendor \
 	&& go build -o /bin/mesos-consul \
 	&& rm -rf /go \
-	&& apk del --purge go git mercurial
+	&& apk del --purge make git glide
 
 ENTRYPOINT [ "/bin/mesos-consul" ]
