@@ -19,6 +19,7 @@ func cleanName(name string, separator string, groupPrefixes []string) string {
 		}
 
 		if groups := reg.FindStringSubmatch(_name); len(groups) > 1 {
+			// if matched, the submatch is the second element
 			_name = groups[1]
 			break
 		}
