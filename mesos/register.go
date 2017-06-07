@@ -117,6 +117,25 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 
 	address := t.IP(m.IpOrder...)
 
+	// build a map to indicate public ports
+	var registerPorts map[int]struct{}
+	if m.ServicePortLabel != "" {
+		p := t.Label(m.ServicePortLabel)
+		if p != "" {
+			ps := strings.Split(p, ",")
+			if len(ps) > 0 {
+				registerPorts = make(map[int]struct{}, 0)
+				for _, pv := range ps {
+					pv = strings.TrimSpace(pv)
+					pi, err := strconv.Atoi(pv)
+					if err == nil {
+						registerPorts[pi] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+
 	l := t.Label("tags")
 	if l != "" {
 		tags = strings.Split(t.Label("tags"), ",")
@@ -127,6 +146,14 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 	tags = buildRegisterTaskTags(tname, tags, m.taskTag)
 
 	for key := range t.DiscoveryInfo.Ports.DiscoveryPorts {
+		// We append -portN to ports after the first.
+		// This is done to preserve compatibility with
+		// existing implementations which may rely on the
+		// old unprefixed name.
+		svcName := tname
+		if key > 0 {
+			svcName = fmt.Sprintf("%s-port%d", svcName, key+1)
+		}
 		var porttags []string
 		discoveryPort := state.DiscoveryPort(t.DiscoveryInfo.Ports.DiscoveryPorts[key])
 		serviceName := discoveryPort.Name
@@ -143,8 +170,8 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 		}
 		if discoveryPort.Name != "" {
 			m.Registry.Register(&registry.Service{
-				ID:      fmt.Sprintf("%s:%s:%s:%s:%d", m.ServiceIdPrefix, agent, tname, address, discoveryPort.Number),
-				Name:    tname,
+				ID:      fmt.Sprintf("%s:%s:%s:%s:%d", m.ServiceIdPrefix, agent, svcName, address, discoveryPort.Number),
+				Name:    svcName,
 				Port:    toPort(servicePort),
 				Address: address,
 				Tags:    append(append(tags, serviceName), porttags...),
@@ -159,10 +186,23 @@ func (m *Mesos) registerTask(t *state.Task, agent string) {
 	}
 
 	if t.Resources.PortRanges != "" {
-		for _, port := range t.Resources.Ports() {
+		for key, port := range t.Resources.Ports() {
+			// do not register port if explicit port label was found
+			if _, ok := registerPorts[key]; len(registerPorts) > 0 && !ok {
+				continue
+			}
+
+			// We append -portN to ports after the first.
+			// This is done to preserve compatibility with
+			// existing implementations which may rely on the
+			// old unprefixed name.
+			svcName := tname
+			if key > 0 {
+				svcName = fmt.Sprintf("%s-port%d", svcName, key+1)
+			}
 			m.Registry.Register(&registry.Service{
-				ID:      fmt.Sprintf("%s:%s:%s:%s:%s", m.ServiceIdPrefix, agent, tname, address, port),
-				Name:    tname,
+				ID:      fmt.Sprintf("%s:%s:%s:%s:%s", m.ServiceIdPrefix, agent, svcName, address, port),
+				Name:    svcName,
 				Port:    toPort(port),
 				Address: address,
 				Tags:    tags,
