@@ -13,15 +13,9 @@ import (
 	"github.com/CiscoCloud/mesos-consul/registry"
 	"github.com/CiscoCloud/mesos-consul/state"
 
-	consulapi "github.com/hashicorp/consul/api"
-	proto "github.com/mesos/mesos-go/api/v0/mesosproto"
+	proto "github.com/mesos/mesos-go/mesosproto"
 	log "github.com/sirupsen/logrus"
 )
-
-type CacheEntry struct {
-	service      *consulapi.AgentServiceRegistration
-	isRegistered bool
-}
 
 type Mesos struct {
 	Registry registry.Registry
