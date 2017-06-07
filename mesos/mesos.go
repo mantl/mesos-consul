@@ -36,9 +36,10 @@ type Mesos struct {
 
 	Separator string
 
-	ServiceName     string
-	ServiceTags     []string
-	ServiceIdPrefix string
+	ServiceName      string
+	ServiceTags      []string
+	ServiceIdPrefix  string
+	ServicePortLabel string
 }
 
 func New(c *config.Config) *Mesos {
@@ -83,6 +84,7 @@ func New(c *config.Config) *Mesos {
 	}
 
 	m.ServiceIdPrefix = c.ServiceIdPrefix
+	m.ServicePortLabel = c.ServicePortLabel
 
 	return m
 }
