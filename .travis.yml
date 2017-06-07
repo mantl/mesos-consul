@@ -5,7 +5,7 @@ go:
   - 1.7.x
   - tip
 
-go_import_path: github.com/CiscoCloud/mesos-consul
+go_import_path: github.com/mantl/mesos-consul
 
 install:
   - go get -v github.com/Masterminds/glide
