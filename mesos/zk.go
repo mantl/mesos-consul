@@ -6,9 +6,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/mesos/mesos-go/detector"
-	_ "github.com/mesos/mesos-go/detector/zoo"
-	proto "github.com/mesos/mesos-go/mesosproto"
+	"github.com/mesos/mesos-go/api/v0/detector"
+	_ "github.com/mesos/mesos-go/api/v0/detector/zoo"
+	proto "github.com/mesos/mesos-go/api/v0/mesosproto"
 	log "github.com/sirupsen/logrus"
 )
 
