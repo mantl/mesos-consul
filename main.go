@@ -90,6 +90,7 @@ func parseFlags(args []string) (*config.Config, error) {
 	flags.StringVar(&c.ServiceName, "service-name", "mesos", "")
 	flags.StringVar(&c.ServiceTags, "service-tags", "", "")
 	flags.StringVar(&c.ServiceIdPrefix, "service-id-prefix", "mesos-consul", "")
+	flags.StringVar(&c.ServicePortLabel, "service-port-label", "", "")
 
 	consul.AddCmdFlags(flags)
 
@@ -144,9 +145,9 @@ Options:
 				(default netinfo,mesos,host)
   --heartbeats-before-remove	Number of times that registration needs to fail before removing
 				task from Consul. (default: 1)
-  --whitelist=<regex>		Only register services matching the provided regex. 
+  --whitelist=<regex>		Only register services matching the provided regex.
 				Can be specified multiple times
-  --blacklist=<regex>		Do not register services matching the provided regex. 
+  --blacklist=<regex>		Do not register services matching the provided regex.
 				Can be specified multiple times
   --fw-whitelist=<regex>	Only register services from frameworks matching the provided
 				regex.
