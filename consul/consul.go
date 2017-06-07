@@ -2,7 +2,9 @@ package consul
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -66,15 +68,44 @@ func (c *Consul) newAgent(address string) *consulapi.Client {
 	if c.config.sslEnabled {
 		log.Debugf("enabling SSL")
 		config.Scheme = "https"
-	}
 
-	if !c.config.sslVerify {
-		log.Debugf("disabled SSL verification")
-		config.HttpClient.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
+		tlsClientConfig := &tls.Config{}
+
+		if c.config.sslCert != "" {
+			log.Debug("Enabling SSL cert")
+
+			//rawCert, _ := ioutil.ReadFile(c.config.sslCert)
+			//prvKey := x509.ParsePKCS1PrivateKey(rawCert)
+			cert, err := tls.LoadX509KeyPair(c.config.sslCert, c.config.sslCert)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			tlsClientConfig.Certificates = []tls.Certificate{cert}
 		}
+
+		if c.config.sslCaCert != "" {
+			log.Debug("Enabling SSL CA certs")
+
+			caCert, err := ioutil.ReadFile(c.config.sslCaCert)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			caCertPool := x509.NewCertPool()
+			caCertPool.AppendCertsFromPEM(caCert)
+
+			tlsClientConfig.RootCAs = caCertPool
+		}
+
+		if !c.config.sslVerify {
+			tlsClientConfig.InsecureSkipVerify = true
+		}
+
+		config.HttpClient.Transport = &http.Transport{
+			TLSClientConfig: tlsClientConfig,
+		}
+
 	}
 
 	if c.config.auth.Enabled {
@@ -96,6 +127,11 @@ func (c *Consul) Register(service *registry.Service) {
 	if _, ok := serviceCache[service.ID]; ok {
 		log.Debugf("Service found. Not registering: %s", service.ID)
 		c.CacheMark(service.ID)
+		return
+	}
+
+	if c.config.dryRun {
+		log.Info("Dry run, not registering ", service.ID)
 		return
 	}
 

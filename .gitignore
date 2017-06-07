@@ -4,3 +4,6 @@
 mesos-consul
 build/
 .idea/
+
+vendor
+bin/

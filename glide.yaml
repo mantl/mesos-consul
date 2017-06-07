@@ -1,0 +1,14 @@
+package: github.com/CiscoCloud/mesos-consul
+import:
+- package: github.com/hashicorp/consul
+  subpackages:
+  - api
+- package: github.com/mesos/mesos-go
+  version: mesos-0.26.0
+  subpackages:
+  - detector
+  - detector/zoo
+  - mesosproto
+  - upid
+- package: github.com/ogier/pflag
+- package: github.com/sirupsen/logrus
