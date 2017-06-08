@@ -1,5 +1,5 @@
 package main
 
 import (
-	_ "github.com/CiscoCloud/mesos-consul/consul"
+	_ "github.com/mantl/mesos-consul/consul"
 )

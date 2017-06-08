@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/CiscoCloud/mesos-consul/config"
-	"github.com/CiscoCloud/mesos-consul/consul"
-	"github.com/CiscoCloud/mesos-consul/mesos"
+	"github.com/mantl/mesos-consul/config"
+	"github.com/mantl/mesos-consul/consul"
+	"github.com/mantl/mesos-consul/mesos"
 
 	flag "github.com/ogier/pflag"
 	log "github.com/sirupsen/logrus"
@@ -144,7 +144,7 @@ Options:
   --healthcheck-ip=<ip> 	Health check interface ip (default 127.0.0.1)
   --healthcheck-port=<port>	Health check service port (default 24476)
   --mesos-ip-order		Comma separated list to control the order in
-				which github.com/CiscoCloud/mesos-consul searches for the task IP
+				which mesos-consul searches for the task IP
 				address. Valid options are 'netinfo', 'mesos', 'docker' and 'host'
 				(default netinfo,mesos,host)
   --heartbeats-before-remove	Number of times that registration needs to fail before removing
