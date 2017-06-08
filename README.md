@@ -115,7 +115,6 @@ To build it:
 | `heartbeats-before-remove` | Number of times that registration needs to fail before removing task from Consul. (default: 1)
 | `whitelist`         | Only register services matching the provided regex. Can be specified multitple time
 | `blacklist`         | Does not register services matching the provided regex. Can be specified multitple time
-| `shared-service-name`         | Group services matching the same regex into same group e.g. (KafkaBroker)-.* will register KafkaBroker-0 and KafkaBroker-1 as kafkabroker. Canbe specified multiple times
 | `service-name=<name>`      | Service name of the Mesos hosts
 | `service-tags=<tag>,...` | Comma delimited list of tags to register the Mesos hosts. Mesos hosts will be registered as (leader|master|follower).<tag>.<service>.service.consul
 | `service-id-prefix=<prefix>` | Prefix to use for consul service ids registered by mesos-consul. (default: mesos-consul)
