@@ -35,8 +35,8 @@ package: xcompile
 	done
 
 vendor:
-	glide install --strip-vendor
-	glide update --strip-vendor
+	glide install --strip-vendor --strip-vcs
+	glide update --strip-vendor --strip-vcs
 
 vendor-clean:
 	-rm -rf vendor/

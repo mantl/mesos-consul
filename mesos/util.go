@@ -9,14 +9,28 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func cleanName(name string, separator string) string {
+func cleanName(name string, separator string, groupPrefixes []string) string {
+	_name := name
+	for _, p := range(groupPrefixes) {
+		reg, err := regexp.Compile(p)
+		if err != nil {
+			log.Warn(err)
+			continue
+		}
+
+		if groups := reg.FindStringSubmatch(_name); len(groups) > 1 {
+			// if matched, the submatch is the second element
+			_name = groups[1]
+			break
+		}
+	}
 	reg, err := regexp.Compile("[^\\w-]")
 	if err != nil {
 		log.Warn(err)
-		return name
+		return _name
 	}
 
-	s := reg.ReplaceAllString(name, "-")
+	s := reg.ReplaceAllString(_name, "-")
 
 	return strings.ToLower(strings.Replace(s, "_", separator, -1))
 }
