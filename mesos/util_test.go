@@ -51,20 +51,3 @@ func TestSliceContainsString(t *testing.T) {
 		}
 	}
 }
-
-func TestCleanName(t *testing.T) {
-	for _, tt := range []struct {
-		n string
-		s string
-		g []string
-		r string
-	} {
-		{ "Task_0", "-", []string{}, "task-0"},
-		{ "Task-0", "", []string{"(Task)-.*"}, "task"},
-	} {
-		r := cleanName(tt.n, tt.s, tt.g)
-		if r != tt.r {
-			t.Errorf("cleanName(%s, %s, %v) => %s, want %s", tt.n, tt.s, tt.g, r, tt.r)
-		}
-	}
-}
