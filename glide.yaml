@@ -1,4 +1,4 @@
-package: github.com/CiscoCloud/mesos-consul
+package: github.com/mantl/mesos-consul
 import:
 - package: github.com/hashicorp/consul
   subpackages:

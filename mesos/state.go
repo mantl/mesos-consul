@@ -4,8 +4,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/CiscoCloud/mesos-consul/registry"
-	"github.com/CiscoCloud/mesos-consul/state"
+	"github.com/mantl/mesos-consul/registry"
+	"github.com/mantl/mesos-consul/state"
 )
 
 type CheckVar struct {
