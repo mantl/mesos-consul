@@ -1,5 +1,5 @@
-hash: 7afd14062efc92eb00fbac34aa5cc20a0f4a60eb08ae763fdcbeaa3d34da4a8a
-updated: 2017-04-03T15:24:09.796014116-05:00
+hash: f7821b74a568b9756459ad89a7f28bf2630174e5d2aa067a7021e20f3efbf34e
+updated: 2017-06-07T18:02:42.564039844-05:00
 imports:
 - name: github.com/gogo/protobuf
   version: d2e1ade2d719b78fe5b061b4c18a9f7111b5bdc8
