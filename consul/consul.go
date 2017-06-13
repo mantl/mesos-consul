@@ -150,6 +150,7 @@ func (c *Consul) Register(service *registry.Service) {
 		Check: &consulapi.AgentServiceCheck{
 			TTL:      service.Check.TTL,
 			Script:   service.Check.Script,
+			TCP:      service.Check.TCP,
 			HTTP:     service.Check.HTTP,
 			Interval: service.Check.Interval,
 		},

@@ -3,6 +3,7 @@ package registry
 type Check struct {
 	Script   string
 	TTL      string
+	TCP      string
 	HTTP     string
 	Interval string
 }
