@@ -68,6 +68,10 @@ func parseFlags(args []string) (*config.Config, error) {
 	flags.StringVar(&c.HealthcheckIp, "healthcheck-ip", "127.0.0.1", "")
 	flags.StringVar(&c.HealthcheckPort, "healthcheck-port", "24476", "")
 	flags.Var((funcVar)(func(s string) error {
+		c.SharedServiceName = append(c.SharedServiceName, s)
+		return nil
+	}), "shared-service-name", "")
+	flags.Var((funcVar)(func(s string) error {
 		c.TaskWhiteList = append(c.TaskWhiteList, s)
 		return nil
 	}), "whitelist", "")
@@ -154,6 +158,8 @@ Options:
 				Can be specified multiple times
   --fw-blacklist=<regex>	Do not register services from frameworks matching the provided
 				regex.
+				Can be specified multiple times
+  --shared-service-name=<regex>		Regex to extract common group name from task name e.g. (MesosKafka)-.*
 				Can be specified multiple times
   --task-tag=<pattern:tag>	Tag tasks whose name contains 'pattern' substring (case-insensitive) with given tag.
 				Can be specified multiple times

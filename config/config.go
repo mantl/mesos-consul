@@ -18,6 +18,7 @@ type Config struct {
 	FwBlackList     []string
 	TaskTag         []string
 	Separator       string
+	SharedServiceName []string
 
 	// Mesos service name and tags
 	ServiceName      string
@@ -39,6 +40,7 @@ func DefaultConfig() *Config {
 		FwWhiteList:      []string{},
 		FwBlackList:      []string{},
 		TaskTag:          []string{},
+		SharedServiceName: []string{},
 		Separator:        "",
 		ServiceName:      "mesos",
 		ServiceTags:      "",
