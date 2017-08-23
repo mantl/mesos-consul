@@ -1,0 +1,44 @@
+hash: f7821b74a568b9756459ad89a7f28bf2630174e5d2aa067a7021e20f3efbf34e
+updated: 2017-06-07T18:02:42.564039844-05:00
+imports:
+- name: github.com/gogo/protobuf
+  version: d2e1ade2d719b78fe5b061b4c18a9f7111b5bdc8
+  subpackages:
+  - proto
+- name: github.com/golang/glog
+  version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
+- name: github.com/hashicorp/consul
+  version: 9103e77f574254016406ee512d601ad6de6e1efd
+  subpackages:
+  - api
+- name: github.com/hashicorp/go-cleanhttp
+  version: ad28ea4487f05916463e2423a55166280e8254b5
+- name: github.com/hashicorp/serf
+  version: f679d7594a349263f6118db40d87122d3a474e7d
+  subpackages:
+  - coordinate
+- name: github.com/mesos/mesos-go
+  version: 7228b13084ce3ea645dbf7c8ecb5704301a6eadf
+  subpackages:
+  - detector
+  - detector/zoo
+  - mesosproto
+  - mesosutil
+  - upid
+- name: github.com/ogier/pflag
+  version: 45c278ab3607870051a2ea9040bb85fcb8557481
+- name: github.com/samuel/go-zookeeper
+  version: 1d7be4effb13d2d908342d349d71a284a7542693
+  subpackages:
+  - zk
+- name: github.com/sirupsen/logrus
+  version: 7f4b1adc791766938c29457bed0703fb9134421a
+- name: golang.org/x/net
+  version: b4690f45fa1cafc47b1c280c2e75116efe40cc13
+  subpackages:
+  - context
+- name: golang.org/x/sys
+  version: 30237cf4eefd639b184d1f2cb77a581ea0be8947
+  subpackages:
+  - unix
+testImports: []

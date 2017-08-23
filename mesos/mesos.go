@@ -8,20 +8,14 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/CiscoCloud/mesos-consul/config"
-	"github.com/CiscoCloud/mesos-consul/consul"
-	"github.com/CiscoCloud/mesos-consul/registry"
-	"github.com/CiscoCloud/mesos-consul/state"
+	"github.com/mantl/mesos-consul/config"
+	"github.com/mantl/mesos-consul/consul"
+	"github.com/mantl/mesos-consul/registry"
+	"github.com/mantl/mesos-consul/state"
 
-	consulapi "github.com/hashicorp/consul/api"
 	proto "github.com/mesos/mesos-go/mesosproto"
 	log "github.com/sirupsen/logrus"
 )
-
-type CacheEntry struct {
-	service      *consulapi.AgentServiceRegistration
-	isRegistered bool
-}
 
 type Mesos struct {
 	Registry registry.Registry
@@ -42,9 +36,10 @@ type Mesos struct {
 
 	Separator string
 
-	ServiceName     string
-	ServiceTags     []string
-	ServiceIdPrefix string
+	ServiceName      string
+	ServiceTags      []string
+	ServiceIdPrefix  string
+	ServicePortLabel string
 }
 
 func New(c *config.Config) *Mesos {
@@ -89,6 +84,7 @@ func New(c *config.Config) *Mesos {
 	}
 
 	m.ServiceIdPrefix = c.ServiceIdPrefix
+	m.ServicePortLabel = c.ServicePortLabel
 
 	return m
 }

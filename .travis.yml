@@ -2,9 +2,15 @@
 language: go
 
 go:
-  - 1.6
+  - 1.7.x
   - tip
 
-install: go get -v -t ./....
+go_import_path: github.com/mantl/mesos-consul
 
-script: go test -v ./...
+install:
+  - go get -v github.com/Masterminds/glide
+  - cd $GOPATH/src/github.com/Masterminds/glide && git checkout tags/v0.12.3 && go install && cd -
+  - glide install
+  - make vendor
+
+script: make test

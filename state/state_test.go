@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/mesos/mesos-go/upid"
-	. "github.com/CiscoCloud/mesos-consul/state"
+	. "github.com/mantl/mesos-consul/state"
 )
 
 func TestResources_Ports(t *testing.T) {

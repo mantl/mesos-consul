@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/CiscoCloud/mesos-consul/config"
-	"github.com/CiscoCloud/mesos-consul/consul"
-	"github.com/CiscoCloud/mesos-consul/mesos"
+	"github.com/mantl/mesos-consul/config"
+	"github.com/mantl/mesos-consul/consul"
+	"github.com/mantl/mesos-consul/mesos"
 
 	flag "github.com/ogier/pflag"
 	log "github.com/sirupsen/logrus"
@@ -90,6 +90,7 @@ func parseFlags(args []string) (*config.Config, error) {
 	flags.StringVar(&c.ServiceName, "service-name", "mesos", "")
 	flags.StringVar(&c.ServiceTags, "service-tags", "", "")
 	flags.StringVar(&c.ServiceIdPrefix, "service-id-prefix", "mesos-consul", "")
+	flags.StringVar(&c.ServicePortLabel, "service-port-label", "", "")
 
 	consul.AddCmdFlags(flags)
 
@@ -139,14 +140,14 @@ Options:
   --healthcheck-ip=<ip> 	Health check interface ip
   --healthcheck-port=<port>	Health check service port (default 24476)
   --mesos-ip-order		Comma separated list to control the order in
-				which github.com/CiscoCloud/mesos-consul searches for the task IP
+				which mesos-consul searches for the task IP
 				address. Valid options are 'netinfo', 'mesos', 'docker' and 'host'
 				(default netinfo,mesos,host)
   --heartbeats-before-remove	Number of times that registration needs to fail before removing
 				task from Consul. (default: 1)
-  --whitelist=<regex>		Only register services matching the provided regex. 
+  --whitelist=<regex>		Only register services matching the provided regex.
 				Can be specified multiple times
-  --blacklist=<regex>		Do not register services matching the provided regex. 
+  --blacklist=<regex>		Do not register services matching the provided regex.
 				Can be specified multiple times
   --fw-whitelist=<regex>	Only register services from frameworks matching the provided
 				regex.
