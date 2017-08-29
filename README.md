@@ -104,7 +104,7 @@ To build it:
 | `refresh`             | Time between refreshes of Mesos tasks
 | `mesos-ip-order`             | Comma separated list to control the order in which github.com/CiscoCloud/mesos-consul searches or the task IP address. Valid options are 'netinfo', 'mesos', 'docker' and 'host' (default netinfo,mesos,host)
 | `healthcheck`             | Enables a http endpoint for health checks. When this flag is enabled, serves health status on 127.0.0.1:24476
-| `healthcheck-ip`             | Health check service interface ip (default 127.0.0.1)
+| `healthcheck-ip`             | Health check service interface ip
 | `healthcheck-port`             | Health check service port. (default 24476)
 | `consul-auth`       | The basic authentication username (and optional password), separated by a colon.
 | `consul-ssl`        | Use HTTPS while talking to the registry.
