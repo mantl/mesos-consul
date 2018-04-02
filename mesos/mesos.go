@@ -40,6 +40,7 @@ type Mesos struct {
 	ServiceTags      []string
 	ServiceIdPrefix  string
 	ServicePortLabel string
+	SharedServiceName []string
 }
 
 func New(c *config.Config) *Mesos {
@@ -59,7 +60,7 @@ func New(c *config.Config) *Mesos {
 		log.WithField("task-tag", c.TaskTag).Fatal(err.Error())
 	}
 
-	m.ServiceName = cleanName(c.ServiceName, c.Separator)
+	m.ServiceName = cleanName(c.ServiceName, c.Separator, c.SharedServiceName)
 
 	m.Registry = consul.New()
 
@@ -85,6 +86,7 @@ func New(c *config.Config) *Mesos {
 
 	m.ServiceIdPrefix = c.ServiceIdPrefix
 	m.ServicePortLabel = c.ServicePortLabel
+	m.SharedServiceName = c.SharedServiceName
 
 	return m
 }
